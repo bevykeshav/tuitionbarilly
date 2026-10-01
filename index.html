@@ -1,202 +1,177 @@
 <!DOCTYPE html>
-<html lang="hi"><head><meta charset="utf-8">
+<html lang="hi">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tuition Daily Report</title>
+<title>क्रेव संपर्क</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#C8102E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="क्रेव संपर्क">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mu:#6b6a65;--ac:#1f5f4a;--on:#fff;--ln:#dedbd2;--soft:#e3efe9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161715;--card:#222320;--tx:#efeee9;--mu:#9d9b93;--ac:#5cb592;--on:#10201a;--ln:#383a35;--soft:#25352e}}
-:root[data-theme="dark"]{--bg:#161715;--card:#222320;--tx:#efeee9;--mu:#9d9b93;--ac:#5cb592;--on:#10201a;--ln:#383a35;--soft:#25352e}
+:root{--bg:#F2F4F0;--card:#fff;--ink:#14231C;--mute:#5F6F66;--line:#DDE3DC;--red:#C8102E;--on:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101814;--card:#18231D;--ink:#EAF1EC;--mute:#93A399;--line:#26352C;--red:#F0475F}}
+:root[data-theme="dark"]{--bg:#101814;--card:#18231D;--ink:#EAF1EC;--mute:#93A399;--line:#26352C;--red:#F0475F}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:0 12px 40px}
-.tabs{display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5}
-.tabs button{flex:1}
-button,input,textarea{font:inherit;color:var(--tx)}
-button{border:1px solid var(--ln);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px}
-button.on,.tabs button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
-.c{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px;margin:10px 0}
-h2{margin:0 0 6px;font-size:18px}
-label{display:block;margin:12px 0 6px;color:var(--mu);font-size:14px}
-input,textarea{width:100%;border:1px solid var(--ln);background:var(--bg);border-radius:10px;padding:10px}
-textarea{min-height:72px}
-.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
-.chip{white-space:nowrap}.chip.done{border-color:var(--ac);background:var(--soft)}
-.chip.on{background:var(--ac)}
-.row{display:flex;gap:8px;align-items:center;margin:6px 0}.row>*:first-child{flex:1}
-.pri{background:var(--ac);color:var(--on);border-color:var(--ac);width:100%;font-weight:600}
-.mu{color:var(--mu);font-size:14px}
-.wrap{overflow-x:auto;border:1px solid var(--ln);border-radius:10px}
-.rp{width:720px;background:#fff;color:#111;padding:24px;font-family:system-ui,"Segoe UI",Roboto,sans-serif;font-size:13px}
-.rp h1{font-size:20px;margin:0 0 8px}.rp p{margin:2px 0}
-.rp table{width:100%;border-collapse:collapse;margin:12px 0}
-.rp th,.rp td{border:1px solid #444;padding:6px;text-align:left;vertical-align:top}
-.rp th{background:#e8e8e8}
-.rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
-</style></head><body>
-<div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
-<div class="mu" id="sy"></div>
-<div id="v"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Hind',system-ui,sans-serif;font-size:16px;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+header{padding:18px 16px 8px}
+h1{margin:0;font-size:22px;font-weight:700}
+.sub{color:var(--mute);font-size:14px}
+.search{margin:10px 16px;display:block;width:calc(100% - 32px);padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 14px;border-radius:20px;font:inherit;font-size:14px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.list{margin:0 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;text-align:left}
+.row:last-child{border-bottom:0}
+.av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff}
+.nm{font-weight:500}.ph{color:var(--mute);font-size:14px}
+.tag{margin-left:auto;font-size:12px;color:var(--mute);border:1px solid var(--line);padding:2px 8px;border-radius:10px}
+.empty{padding:36px 20px;text-align:center;color:var(--mute)}
+.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--red);color:#fff;border:0;border-radius:28px;padding:14px 22px;font:inherit;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.bk{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:5}
+.bk.open{display:flex}
+.sheet{background:var(--card);width:100%;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:90%;overflow:auto;animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.big{font-size:20px;font-weight:700;margin:0}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 10px}
+.a{display:block;text-align:center;text-decoration:none;padding:14px;border-radius:12px;font-weight:700;color:#fff;border:0;font:inherit;font-weight:700}
+.call{background:#1B6EF3}.wa{background:#1FA855}
+.sm{display:flex;gap:10px}
+.sm button{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--ink);font:inherit}
+.sm .del{color:var(--red)}
+label{display:block;margin:12px 0 4px;font-size:14px;color:var(--mute)}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.save{width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;background:var(--red);color:#fff;font:inherit;font-weight:700}
+.foot{display:flex;gap:10px;justify-content:center;margin:18px 16px 0}
+.foot button{background:none;border:1px solid var(--line);color:var(--mute);padding:8px 14px;border-radius:10px;font:inherit;font-size:14px}
+.cr{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}.dot{width:12px;height:12px;border-radius:50%;flex:none}.cn{flex:1}.cr button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:14px}.cr .del{color:var(--red)}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><h1>Crave Kitchen संपर्क</h1><div class="sub" id="cnt"></div></header>
+<input class="search" id="q" type="search" placeholder="नाम या नंबर खोजें">
+<div class="chips" id="chips"></div>
+<div class="list" id="list"></div>
+<div class="foot"><button id="rf">🔄 शीट से रीफ़्रेश</button></div>
+<button class="fab" id="add">+ नया नंबर</button>
+
+<div class="bk" id="bk"><div class="sheet" id="sheet"></div></div>
+
 <script>
-let S={students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']};
-const SUB=()=>(S.subjects&&S.subjects.length)?S.subjects:['SST','Math','Science'];
-try{const r=localStorage.getItem('tms1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
-const persist=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
-const store=()=>{S.ts=Date.now();persist();push()};
-const DEF_URL='https://script.google.com/macros/s/AKfycbzVTdVBoJtSjvCiQPbuLv6ovyJBH2QJm47WFXxXgv5O10dR4v6A5r16iWCiOIN1fRiYoQ/exec';
-let CU=DEF_URL;try{CU=localStorage.getItem('tms_url')||DEF_URL}catch(e){}
-let tmr=null,busy=false,again=false;
-function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
-async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
-function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: sync baaki hai...');tmr=setTimeout(doPush,2000)}
-async function doPush(){
- if(busy){again=true;return}busy=true;
- try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: save ho gaya':'Cloud: error aaya, dobara try hoga')}
- catch(e){sy('Cloud: net nahi hai, net aate hi sync hoga');again=true}
- busy=false;if(again&&navigator.onLine){again=false;push()}
+const PAL=["#C8102E","#1B6EF3","#8A5A00","#6B3FA0","#0E7C66","#D6336C","#2B8A3E","#E8590C","#0B7285","#5C3D2E"];
+let CATS=[["ग्राहक",PAL[0]],["वर्कर",PAL[1]],["हेल्पर",PAL[2]],["डीलर",PAL[3]],["सप्लायर",PAL[4]]];
+const KEY="crave_contacts_v1",URLK="crave_contacts_api",DEFAULT_API="https://script.google.com/macros/s/AKfycbwxkTBq0UohF9xuiONhwg9vb2U5Z_0mK-h_DijlOaIUmKRShOT0YAv_xomvF-EHE02B7g/exec";
+let data=[],filter="सभी",api=DEFAULT_API,status="";
+try{data=JSON.parse(localStorage.getItem(KEY)||"[]");api=localStorage.getItem(URLK)||DEFAULT_API}catch(e){}
+try{const c=JSON.parse(localStorage.getItem("crave_cats_v1")||"null");if(Array.isArray(c)&&c.length)CATS=c}catch(e){}
+const cacheCats=()=>{try{localStorage.setItem("crave_cats_v1",JSON.stringify(CATS))}catch(e){}};
+const $=id=>document.getElementById(id);
+const cache=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}};
+const color=c=>(CATS.find(x=>x[0]===c)||[0,"#555"])[1];
+const digits=n=>n.replace(/\D/g,"");
+const wa=n=>{let d=digits(n);if(d.length===10)d="91"+d;else if(d.length===11&&d[0]==="0")d="91"+d.slice(1);return "https://wa.me/"+d};
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function jsonp(params){return new Promise((res,rej)=>{
+  const cb="cb"+Date.now()+Math.floor(Math.random()*1e4),s=document.createElement("script");
+  const clean=()=>{clearTimeout(t);delete window[cb];s.remove()};
+  const t=setTimeout(()=>{clean();rej()},20000);
+  window[cb]=r=>{clean();res(r)};s.onerror=()=>{clean();rej()};
+  s.src=api+"?"+new URLSearchParams({...params,callback:cb});document.head.appendChild(s)})}
+function setStatus(t){status=t;$("cnt").textContent=data.length+" संपर्क"+(t?" • "+t:"")}
+function push(p){
+  if(!api)return;setStatus("शीट में सेव हो रहा है…");
+  jsonp(p).then(r=>setStatus(r&&r.ok?"शीट में सेव हो गया":"शीट में सेव नहीं हुआ")).catch(()=>setStatus("इंटरनेट/शीट लिंक की दिक्कत, दोबारा कोशिश करें"));
 }
-async function pull(){
- if(!CU)return;sy('Cloud se check ho raha hai...');
- try{
-  const r=await call({a:'get'});
-  if(!r.ok){sy('Cloud: error, link check karo');return}
-  const rt=r.data?(r.data.ts||0):0;
-  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();draw();sy('Cloud se data aa gaya')}
-  else if((S.ts||0)>rt){await doPush()}
-  else sy('Cloud: sab up to date')
- }catch(e){sy('Cloud: net nahi hai')}
+function load(){
+  if(!api){setup();return}
+  setStatus("शीट से ला रहे हैं…");
+  jsonp({action:"list"}).then(r=>{if(r&&r.ok){data=r.rows;if(Array.isArray(r.cats)&&r.cats.length){CATS=r.cats;cacheCats()}cache();render();setStatus("शीट से अपडेट")}else setStatus("शीट पढ़ नहीं पाए")})
+   .catch(()=>setStatus("शीट से नहीं जुड़ पाए (पुराने नंबर दिख रहे हैं)"));
 }
-window.addEventListener('online',()=>{if(again)push()});
-const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
-const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
-const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const today=new Date();
-let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
-let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
-const R=(d,s)=>((S.recs[d]||{})[s])||{};
-function setF(f,v,tog){const o=S.recs[date]||(S.recs[date]={});const r=o[sel]||(o[sel]={});r[f]=(tog&&r[f]===v)?'':v;store()}
-function seg(r,f,opts){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}">${l}</button>`).join('')}</div>`}
-function vEntry(){
- if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
- if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- const st=S.students.find(s=>s.id===sel),r=R(date,sel);
- const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
- const full=r.att!=='A';
- return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
- <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
- <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
- <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
- <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
- ${full?`<label>Homework karke laye?</label>${seg(r,'hw',[['Y','Yes'],['N','No']])}
- <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
- <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
- <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
- <label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>`;
+function render(){
+  const q=$("q").value.trim().toLowerCase();
+  $("chips").innerHTML=["सभी",...CATS.map(c=>c[0])].map(c=>{
+    const n=c==="सभी"?data.length:data.filter(d=>d.cat===c).length;
+    return `<button class="chip ${c===filter?"on":""}" data-c="${c}">${c} (${n})</button>`}).join("")+`<button class="chip" id="mc">✏️ प्रकार</button>`;
+  const rows=data.filter(d=>(filter==="सभी"||d.cat===filter)&&(!q||d.name.toLowerCase().includes(q)||d.phone.includes(q)))
+    .sort((a,b)=>a.name.localeCompare(b.name,"hi"));
+  setStatus(status);
+  $("list").innerHTML=rows.length?rows.map(d=>`<button class="row" data-id="${d.id}"><span class="av" style="background:${color(d.cat)}">${esc(d.name.trim()[0]||"?")}</span><span><div class="nm">${esc(d.name)}</div><div class="ph">${esc(d.phone)}</div></span><span class="tag">${d.cat}</span></button>`).join("")
+    :`<div class="empty">${data.length?"कोई संपर्क नहीं मिला":"अभी कोई नंबर नहीं है। नीचे \"+ नया नंबर\" दबाकर पहला संपर्क जोड़ें।"}</div>`;
 }
-function stats(sid){
- const rows=[],a=new Date(from+'T00:00:00');
- for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext)rows.push([d,r])}
- return rows;
+const open=h=>{$("sheet").innerHTML=h;$("bk").classList.add("open")};
+const close=()=>$("bk").classList.remove("open");
+function setup(){
+  open(`<p class="big">Google Sheet जोड़ें</p><div class="ph" style="margin-top:6px">Apps Script की Web app वाली लिंक (https://script.google.com/macros/s/.../exec) यहाँ चिपकाएँ।</div>
+  <label>Web app लिंक</label><input id="fu" type="url" value="${esc(api)}" placeholder="https://script.google.com/macros/s/.../exec">
+  <button class="save" id="su">लिंक सेव करें</button>`);
 }
-const col=(t,ok)=>t?`<span class="${ok?'g':'r'}">${t}</span>`:'-';
-function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'<span class="r">School me: '+a.map(esc).join(', ')+'</span>':'')+(a.length&&b.length?'<br>':'')+(b.length?'<span class="g">Paas me: '+b.map(esc).join(', ')+'</span>':'')||'-'}
-function build(){
- const st=S.students.find(s=>s.id===rs);if(!st)return '';
- const rows=stats(rs);
- const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
- const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${col(H[r.hw],r.hw==='Y')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
- return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
- <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
- <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
- <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
- <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
- <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
+function view(id){
+  const d=data.find(x=>x.id===id);if(!d)return;
+  open(`<p class="big">${esc(d.name)}</p><div class="ph">${esc(d.phone)} • ${d.cat}</div>${d.note?`<div class="ph" style="margin-top:6px">${esc(d.note)}</div>`:""}
+  <div class="acts"><a class="a call" href="tel:${digits(d.phone)}">📞 कॉल करें</a><a class="a wa" href="${wa(d.phone)}" target="_blank" rel="noopener">💬 WhatsApp</a></div>
+  <div class="sm"><button data-e="${id}">बदलें</button><button class="del" data-d="${id}">हटाएँ</button><button id="cl">बंद करें</button></div>`);
 }
-function vRep(){
- if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
- if(!S.students.find(s=>s.id===rs))rs=S.students[0].id;
- const chips=S.students.map(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`).join('');
- return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Pichle 7 din</button><button data-q="m">Is mahine</button></div>
- <div class="row"><div><label>Se</label><input type="date" id="fr" value="${from}"></div><div><label>Tak</label><input type="date" id="to" value="${to}"></div></div>
- <button class="pri" id="mk">PDF banao</button><p class="mu" id="ms">${esc(msg)}</p></div>
- <div class="wrap">${build()}</div>`;
+function form(id){
+  const d=data.find(x=>x.id===id)||{name:"",phone:"",cat:filter==="सभी"?"ग्राहक":filter,note:""};
+  open(`<p class="big">${id?"संपर्क बदलें":"नया संपर्क"}</p>
+  <label>नाम</label><input id="fn" value="${esc(d.name)}">
+  <label>मोबाइल नंबर</label><input id="fp" type="tel" inputmode="tel" value="${esc(d.phone)}">
+  <label>किस तरह का संपर्क</label><select id="fc">${CATS.map(c=>`<option ${c[0]===d.cat?"selected":""}>${c[0]}</option>`).join("")}</select>
+  <label>नोट (चाहें तो)</label><input id="fo" value="${esc(d.note)}">
+  <button class="save" id="sv" data-id="${id||""}">सेव करें</button>`);
 }
-function vStu(){
- const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
- return `<div class="c"><h2>Teacher ka naam</h2><input data-teacher value="${esc(S.teacher)}"></div>
- <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
- <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
- <div class="c"><h2>Sab bacche</h2>${list}</div>
- <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
- <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
-}
-function draw(){
- document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
- $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():vStu();
-}
-const $v=document.getElementById('v');
-function dlFile(name,blob){
- const u=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(u),60000);
-}
-async function mkpdf(){
- const ms=document.getElementById('ms'),el=document.getElementById('rp');
- ms.textContent='PDF ban rahi hai...';
- try{
-  const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff'});
-  const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'pt',format:'a4'});
-  const m=20,w=595-2*m,k=w/cv.width,ph=Math.floor((842-2*m)/k);
-  for(let y=0,p=0;y<cv.height;y+=ph,p++){
-   const h=Math.min(ph,cv.height-y),t=document.createElement('canvas');t.width=cv.width;t.height=h;
-   const x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,t.width,h);x.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
-   if(p)pdf.addPage();pdf.addImage(t.toDataURL('image/jpeg',0.92),'JPEG',m,m,w,h*k);
+function pushCats(extra){cacheCats();if(!api)return;setStatus("शीट में सेव हो रहा है…");
+  jsonp({action:"savecats",cats:JSON.stringify(CATS)}).then(()=>extra?jsonp(extra):0).then(()=>setStatus("शीट में सेव हो गया")).catch(()=>setStatus("इंटरनेट/शीट लिंक की दिक्कत, दोबारा कोशिश करें"))}
+function manage(){open(`<p class="big">संपर्क के प्रकार</p><div>${CATS.map((c,i)=>`<div class="cr"><span class="dot" style="background:${c[1]}"></span><span class="cn">${esc(c[0])} <span class="ph">(${data.filter(d=>d.cat===c[0]).length})</span></span><button data-cr="${i}">नाम बदलें</button><button class="del" data-cd="${i}">हटाएँ</button></div>`).join("")}</div>
+  <label>नया प्रकार जोड़ें</label><input id="nc" placeholder="जैसे: रिश्तेदार">
+  <button class="save" id="ca">+ प्रकार जोड़ें</button><div class="sm" style="margin-top:10px"><button id="cl">बंद करें</button></div>`)}
+function addCat(){const n=$("nc").value.trim();if(!n)return;if(CATS.some(c=>c[0]===n)){alert("यह प्रकार पहले से है");return}
+  const used=CATS.map(c=>c[1]);CATS.push([n,PAL.find(x=>!used.includes(x))||PAL[CATS.length%PAL.length]]);pushCats();render();manage()}
+function renCat(i){const old=CATS[i][0],n=(prompt("नया नाम लिखें",old)||"").trim();if(!n||n===old)return;
+  if(CATS.some(c=>c[0]===n)){alert("यह नाम पहले से है");return}
+  CATS[i][0]=n;data.forEach(d=>{if(d.cat===old)d.cat=n});if(filter===old)filter=n;cache();pushCats({action:"renamecat",from:old,to:n});render();manage()}
+function delCat(i){const c=CATS[i][0];if(CATS.length<2){alert("कम से कम एक प्रकार रहना चाहिए");return}
+  if(data.some(d=>d.cat===c)){alert("\""+c+"\" में अभी संपर्क हैं। पहले उन्हें दूसरे प्रकार में करें, फिर हटाएँ।");return}
+  if(!confirm("\""+c+"\" प्रकार हटा दें?"))return;CATS.splice(i,1);if(filter===c)filter="सभी";pushCats();render();manage()}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t)return;
+  if(t.id==="mc")manage();
+  else if(t.id==="ca")addCat();
+  else if(t.dataset.cr!==undefined)renCat(+t.dataset.cr);
+  else if(t.dataset.cd!==undefined)delCat(+t.dataset.cd);
+  else if(t.dataset.c){filter=t.dataset.c;render()}
+  else if(t.classList.contains("row"))view(t.dataset.id);
+  else if(t.id==="add")form();
+  else if(t.id==="cl")close();
+  else if(t.id==="rf")load();
+  else if(t.id==="st")setup();
+  else if(t.id==="su"){const u=$("fu").value.trim();if(!/^https:\/\/script\.google\.com\/.+\/exec$/.test(u)){alert("लिंक https://script.google.com/... से शुरू होकर /exec पर खत्म होनी चाहिए");return}
+    api=u;try{localStorage.setItem(URLK,u)}catch(_){}close();load()}
+  else if(t.dataset.e)form(t.dataset.e);
+  else if(t.dataset.d){if(confirm("यह संपर्क हटा दें?")){const id=t.dataset.d;data=data.filter(x=>x.id!==id);cache();close();render();push({action:"delete",id})}}
+  else if(t.id==="sv"){
+    const name=$("fn").value.trim(),phone=$("fp").value.trim();
+    if(!name||digits(phone).length<10){alert("नाम और कम से कम 10 अंकों का नंबर लिखें");return}
+    const rec={id:t.dataset.id||("c"+Date.now()),name,phone,cat:$("fc").value,note:$("fo").value.trim()};
+    const i=data.findIndex(x=>x.id===rec.id);i>=0?data[i]=rec:data.push(rec);
+    cache();close();render();push({action:"save",...rec});
   }
-  const nm=S.students.find(s=>s.id===rs).name.replace(/[^A-Za-z0-9]+/g,'_')||'bacha';
-  const fn='Report_'+nm+'_'+from+'_to_'+to+'.pdf',blob=pdf.output('blob');
-  const f=new File([blob],fn,{type:'application/pdf'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){
-   try{await navigator.share({files:[f],title:fn});ms.textContent='PDF share ho gayi.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancel hua.';return}}
-  }
-  dlFile(fn,blob);ms.textContent='PDF download ho gayi.';
- }catch(e){ms.textContent='PDF nahi ban payi, dobara try karo.'}
-}
-document.addEventListener('click',async e=>{
- const b=e.target.closest('button');if(!b)return;const d=b.dataset;
- if(d.tab){tab=d.tab;msg='';draw()}
- else if(d.sel){sel=d.sel;draw()}
- else if(d.rs){rs=d.rs;draw()}
- else if(d.f){setF(d.f,d.v,true);draw()}
- else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
- else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p});store();draw()}}
- else if(b.id==='wa'){
-  const st=S.students.find(s=>s.id===sel),r=R(date,sel);
-  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
-  const t='Namaste, '+st.name+' ka '+fmt(date)+' ka homework:\n'+r.hwtext.trim()+'\n\n- '+S.teacher+' (Tuition Teacher)';
-  let p=st.ph||'';if(p.length===10)p='91'+p;
-  window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
- }
- else if(b.id==='mk')mkpdf();
- else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
- else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
 });
-document.addEventListener('input',e=>{
- const t=e.target;
- if(t.dataset.t){setF(t.dataset.t,t.value,false)}
- else if(t.dataset.teacher!==undefined){S.teacher=t.value;store()}
- else if(t.dataset.subjects!==undefined){S.subjects=t.value.split(',').map(x=>x.trim()).filter(Boolean);store()}
-});
-document.addEventListener('change',e=>{
- const t=e.target;
- if(t.id==='dt'&&t.value){date=t.value;draw()}
- else if(t.id==='fr'&&t.value){from=t.value;draw()}
- else if(t.id==='to'&&t.value){to=t.value;draw()}
- else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
-});
-draw();
-pull();
-</script></body></html>
+$("bk").addEventListener("click",e=>{if(e.target===$("bk"))close()});
+$("q").addEventListener("input",render);
+render();load();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
