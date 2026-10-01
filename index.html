@@ -59,7 +59,7 @@ function vEntry(){
  const full=r.att!=='A';
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
- <label>Hazri</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
+ <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
  <label>Homework kya diya</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
  <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
  ${full?`<label>Bacche ne homework kiya?</label>${seg(r,'hw',[['Y','Ho gaya'],['N','Nahi hua']])}
@@ -83,7 +83,7 @@ function build(){
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
- <table><tr><th>Date</th><th>Hazri</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
+ <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
  <p><b>Summary:</b> Present ${c('att','P')} din, Absent ${c('att','A')} din. Home-work: ${c('hw','Y')} baar complete, ${c('hw','N')} baar nahi hua. Notebook school me jama (subject ginke): ${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar.</p>
  <p>Rating: Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</p></div>`;
 }
