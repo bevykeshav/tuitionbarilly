@@ -38,7 +38,8 @@ textarea{min-height:72px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-let S={students:[],recs:{},teacher:'Keshav Gangwar'};
+let S={students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']};
+const SUB=()=>(S.subjects&&S.subjects.length)?S.subjects:['SST','Math','Science'];
 try{const r=localStorage.getItem('tms1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const store=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -63,7 +64,7 @@ function vEntry(){
  <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
  ${full?`<label>Bacche ne homework kiya?</label>${seg(r,'hw',[['Y','Ho gaya'],['N','Nahi hua']])}
  <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
- <label>Notebook</label>${seg(r,'nb',[['H','Bacche ke paas'],['S','School me jama']])}
+ <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
  <label>Rating</label>${seg(r,'rt',[['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
  <label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>`;
 }
@@ -72,17 +73,18 @@ function stats(sid){
  for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext)rows.push([d,r])}
  return rows;
 }
+function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'School me: '+a.map(esc).join(', '):'')+(a.length&&b.length?'<br>':'')+(b.length?'Paas me: '+b.map(esc).join(', '):'')||'-'}
 function build(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs);
  const L={P:'Present',A:'Absent'},H={Y:'Ho gaya',N:'Nahi hua'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${L[r.att]||'-'}</td><td>${r.hwtext?'Diya: '+esc(r.hwtext)+'<br>':''}Kiya: ${H[r.hw]||'-'}</td><td>${esc(r.work)||'-'}</td><td>${N[r.nb]||'-'}</td><td>${r.rt||'-'}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${L[r.att]||'-'}</td><td>${r.hwtext?'Diya: '+esc(r.hwtext)+'<br>':''}Kiya: ${H[r.hw]||'-'}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${r.rt||'-'}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
  <table><tr><th>Date</th><th>Hazri</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
- <p><b>Summary:</b> Present ${c('att','P')} din, Absent ${c('att','A')} din. Home-work: ${c('hw','Y')} baar complete, ${c('hw','N')} baar nahi hua. Notebook school me jama: ${c('nb','S')} baar.</p>
+ <p><b>Summary:</b> Present ${c('att','P')} din, Absent ${c('att','A')} din. Home-work: ${c('hw','Y')} baar complete, ${c('hw','N')} baar nahi hua. Notebook school me jama (subject ginke): ${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar.</p>
  <p>Rating: Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</p></div>`;
 }
 function vRep(){
@@ -97,6 +99,7 @@ function vRep(){
 function vStu(){
  const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
  return `<div class="c"><h2>Teacher ka naam</h2><input data-teacher value="${esc(S.teacher)}"></div>
+ <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
  <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
@@ -155,13 +158,14 @@ document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.t){setF(t.dataset.t,t.value,false)}
  else if(t.dataset.teacher!==undefined){S.teacher=t.value;store()}
+ else if(t.dataset.subjects!==undefined){S.subjects=t.value.split(',').map(x=>x.trim()).filter(Boolean);store()}
 });
 document.addEventListener('change',e=>{
  const t=e.target;
  if(t.id==='dt'&&t.value){date=t.value;draw()}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
- else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
+ else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
 });
 draw();
 </script></body></html>
