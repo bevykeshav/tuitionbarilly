@@ -34,6 +34,7 @@ textarea{min-height:72px}
 .rp th{background:#e8e8e8}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
+<div class="mu" id="sy"></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -41,7 +42,31 @@ textarea{min-height:72px}
 let S={students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']};
 const SUB=()=>(S.subjects&&S.subjects.length)?S.subjects:['SST','Math','Science'];
 try{const r=localStorage.getItem('tms1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
-const store=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
+const persist=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
+const store=()=>{S.ts=Date.now();persist();push()};
+let CU='';try{CU=localStorage.getItem('tms_url')||''}catch(e){}
+let tmr=null,busy=false,again=false;
+function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
+async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
+function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: sync baaki hai...');tmr=setTimeout(doPush,2000)}
+async function doPush(){
+ if(busy){again=true;return}busy=true;
+ try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: save ho gaya':'Cloud: error aaya, dobara try hoga')}
+ catch(e){sy('Cloud: net nahi hai, net aate hi sync hoga');again=true}
+ busy=false;if(again&&navigator.onLine){again=false;push()}
+}
+async function pull(){
+ if(!CU)return;sy('Cloud se check ho raha hai...');
+ try{
+  const r=await call({a:'get'});
+  if(!r.ok){sy('Cloud: error, link check karo');return}
+  const rt=r.data?(r.data.ts||0):0;
+  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();draw();sy('Cloud se data aa gaya')}
+  else if((S.ts||0)>rt){await doPush()}
+  else sy('Cloud: sab up to date')
+ }catch(e){sy('Cloud: net nahi hai')}
+}
+window.addEventListener('online',()=>{if(again)push()});
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,6 +127,7 @@ function vStu(){
  <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">${CU?'Abhi sync karo':'Link jodo'}</button></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
@@ -152,6 +178,7 @@ document.addEventListener('click',async e=>{
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
  }
  else if(b.id==='mk')mkpdf();
+ else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
  else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
 });
 document.addEventListener('input',e=>{
@@ -168,4 +195,5 @@ document.addEventListener('change',e=>{
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
 });
 draw();
+pull();
 </script></body></html>
