@@ -59,7 +59,9 @@ function vEntry(){
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  <label>Hazri</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
- ${full?`<label>Home-work</label>${seg(r,'hw',[['Y','Ho gaya'],['N','Nahi hua']])}
+ <label>Homework kya diya</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
+ <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
+ ${full?`<label>Bacche ne homework kiya?</label>${seg(r,'hw',[['Y','Ho gaya'],['N','Nahi hua']])}
  <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
  <label>Notebook</label>${seg(r,'nb',[['H','Bacche ke paas'],['S','School me jama']])}
  <label>Rating</label>${seg(r,'rt',[['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
@@ -67,7 +69,7 @@ function vEntry(){
 }
 function stats(sid){
  const rows=[],a=new Date(from+'T00:00:00');
- for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note)rows.push([d,r])}
+ for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext)rows.push([d,r])}
  return rows;
 }
 function build(){
@@ -75,7 +77,7 @@ function build(){
  const rows=stats(rs);
  const L={P:'Present',A:'Absent'},H={Y:'Ho gaya',N:'Nahi hua'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${L[r.att]||'-'}</td><td>${H[r.hw]||'-'}</td><td>${esc(r.work)||'-'}</td><td>${N[r.nb]||'-'}</td><td>${r.rt||'-'}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${L[r.att]||'-'}</td><td>${r.hwtext?'Diya: '+esc(r.hwtext)+'<br>':''}Kiya: ${H[r.hw]||'-'}</td><td>${esc(r.work)||'-'}</td><td>${N[r.nb]||'-'}</td><td>${r.rt||'-'}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
@@ -93,9 +95,9 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
+ const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
  return `<div class="c"><h2>Teacher ka naam</h2><input data-teacher value="${esc(S.teacher)}"></div>
- <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><button class="pri" id="add">Jodo</button></div>
+ <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
  <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
@@ -138,7 +140,14 @@ document.addEventListener('click',async e=>{
  else if(d.f){setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim();if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c});store();draw()}}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p});store();draw()}}
+ else if(b.id==='wa'){
+  const st=S.students.find(s=>s.id===sel),r=R(date,sel);
+  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
+  const t='Namaste, '+st.name+' ka '+fmt(date)+' ka homework:\n'+r.hwtext.trim()+'\n\n- '+S.teacher+' (Tuition Teacher)';
+  let p=st.ph||'';if(p.length===10)p='91'+p;
+  window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
+ }
  else if(b.id==='mk')mkpdf();
  else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
 });
