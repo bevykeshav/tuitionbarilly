@@ -87,9 +87,9 @@ function vEntry(){
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
- <label>Homework kya diya</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
+ <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
  <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
- ${full?`<label>Bacche ne homework kiya?</label>${seg(r,'hw',[['Y','Ho gaya'],['N','Nahi hua']])}
+ ${full?`<label>Homework karke laye?</label>${seg(r,'hw',[['Y','Yes'],['N','No']])}
  <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
  <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
  <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
@@ -105,14 +105,14 @@ function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r
 function build(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs);
- const L={P:'Present',A:'Absent'},H={Y:'Ho gaya',N:'Nahi hua'},N={H:'Bacche ke paas',S:'School me jama'};
+ const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Diya: '+esc(r.hwtext)+'<br>':''}Kiya: ${col(H[r.hw],r.hw==='Y')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${col(H[r.hw],r.hw==='Y')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
  <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
- <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Home-work: <span class="g">${c('hw','Y')} baar complete</span>, <span class="r">${c('hw','N')} baar nahi hua</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
+ <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
  <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
 }
 function vRep(){
