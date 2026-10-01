@@ -44,7 +44,8 @@ const SUB=()=>(S.subjects&&S.subjects.length)?S.subjects:['SST','Math','Science'
 try{const r=localStorage.getItem('tms1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const persist=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
 const store=()=>{S.ts=Date.now();persist();push()};
-let CU='';try{CU=localStorage.getItem('tms_url')||''}catch(e){}
+const DEF_URL='https://script.google.com/macros/s/AKfycbzVTdVBoJtSjvCiQPbuLv6ovyJBH2QJm47WFXxXgv5O10dR4v6A5r16iWCiOIN1fRiYoQ/exec';
+let CU=DEF_URL;try{CU=localStorage.getItem('tms_url')||DEF_URL}catch(e){}
 let tmr=null,busy=false,again=false;
 function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
 async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
@@ -127,7 +128,7 @@ function vStu(){
  <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
- <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">${CU?'Abhi sync karo':'Link jodo'}</button></div>
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
