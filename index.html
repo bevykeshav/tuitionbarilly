@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuition Report</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1f5f4a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tuition">
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mu:#6b6a65;--ac:#1f5f4a;--on:#fff;--ln:#dedbd2;--soft:#e3efe9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161715;--card:#222320;--tx:#efeee9;--mu:#9d9b93;--ac:#5cb592;--on:#10201a;--ln:#383a35;--soft:#25352e}}
+:root[data-theme="dark"]{--bg:#161715;--card:#222320;--tx:#efeee9;--mu:#9d9b93;--ac:#5cb592;--on:#10201a;--ln:#383a35;--soft:#25352e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:0 12px 40px}
+.tabs{display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5}
+.tabs button{flex:1}
+button,input,textarea{font:inherit;color:var(--tx)}
+button{border:1px solid var(--ln);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px}
+button.on,.tabs button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px;margin:10px 0}
+h2{margin:0 0 6px;font-size:18px}
+label{display:block;margin:12px 0 6px;color:var(--mu);font-size:14px}
+input,textarea{width:100%;border:1px solid var(--ln);background:var(--bg);border-radius:10px;padding:10px}
+textarea{min-height:72px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.chip{white-space:nowrap}.chip.done{border-color:var(--ac);background:var(--soft)}
+.chip.on{background:var(--ac)}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0}.row>*:first-child{flex:1}
+.pri{background:var(--ac);color:var(--on);border-color:var(--ac);width:100%;font-weight:600}
+.mu{color:var(--mu);font-size:14px}
+.wrap{overflow-x:auto;border:1px solid var(--ln);border-radius:10px}
+.rp{width:720px;background:#fff;color:#111;padding:24px;font-family:system-ui,"Segoe UI",Roboto,sans-serif;font-size:13px}
+.rp h1{font-size:20px;margin:0 0 8px}.rp p{margin:2px 0}
+.rp table{width:100%;border-collapse:collapse;margin:12px 0}
+.rp th,.rp td{border:1px solid #444;padding:6px;text-align:left;vertical-align:top}
+.rp th{background:#e8e8e8}
+.rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
+</style></head><body>
+<div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
+<div class="mu" id="sy"></div>
+<div id="v"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let S={students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']};
+const SUB=()=>(S.subjects&&S.subjects.length)?S.subjects:['SST','Math','Science'];
+try{const r=localStorage.getItem('tms1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const persist=()=>{try{localStorage.setItem('tms1',JSON.stringify(S))}catch(e){}};
+const store=()=>{S.ts=Date.now();persist();push()};
+const DEF_URL='https://script.google.com/macros/s/AKfycbzVTdVBoJtSjvCiQPbuLv6ovyJBH2QJm47WFXxXgv5O10dR4v6A5r16iWCiOIN1fRiYoQ/exec';
+let CU=DEF_URL;try{CU=localStorage.getItem('tms_url')||DEF_URL}catch(e){}
+let tmr=null,busy=false,again=false;
+function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
+async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
+function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: sync baaki hai...');tmr=setTimeout(doPush,2000)}
+async function doPush(){
+ if(busy){again=true;return}busy=true;
+ try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: save ho gaya':'Cloud: error aaya, dobara try hoga')}
+ catch(e){sy('Cloud: net nahi hai, net aate hi sync hoga');again=true}
+ busy=false;if(again&&navigator.onLine){again=false;push()}
+}
+async function pull(){
+ if(!CU)return;sy('Cloud se check ho raha hai...');
+ try{
+  const r=await call({a:'get'});
+  if(!r.ok){sy('Cloud: error, link check karo');return}
+  const rt=r.data?(r.data.ts||0):0;
+  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();draw();sy('Cloud se data aa gaya')}
+  else if((S.ts||0)>rt){await doPush()}
+  else sy('Cloud: sab up to date')
+ }catch(e){sy('Cloud: net nahi hai')}
+}
+window.addEventListener('online',()=>{if(again)push()});
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=new Date();
+let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
+let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
+const R=(d,s)=>((S.recs[d]||{})[s])||{};
+function setF(f,v,tog){const o=S.recs[date]||(S.recs[date]={});const r=o[sel]||(o[sel]={});r[f]=(tog&&r[f]===v)?'':v;store()}
+function seg(r,f,opts){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}">${l}</button>`).join('')}</div>`}
+function vEntry(){
+ if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
+ if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
+ const st=S.students.find(s=>s.id===sel),r=R(date,sel);
+ const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
+ const full=r.att!=='A';
+ return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
+ <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
+ <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
+ <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
+ <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
+ ${full?`<label>Homework karke laye?</label>${seg(r,'hw',[['Y','Yes'],['N','No']])}
+ <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
+ <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
+ <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
+ <label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>`;
+}
+function stats(sid){
+ const rows=[],a=new Date(from+'T00:00:00');
+ for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext)rows.push([d,r])}
+ return rows;
+}
+const col=(t,ok)=>t?`<span class="${ok?'g':'r'}">${t}</span>`:'-';
+function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'<span class="r">School me: '+a.map(esc).join(', ')+'</span>':'')+(a.length&&b.length?'<br>':'')+(b.length?'<span class="g">Paas me: '+b.map(esc).join(', ')+'</span>':'')||'-'}
+function build(){
+ const st=S.students.find(s=>s.id===rs);if(!st)return '';
+ const rows=stats(rs);
+ const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
+ const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${col(H[r.hw],r.hw==='Y')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
+ <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
+ <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
+ <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
+ <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
+ <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
+}
+function vRep(){
+ if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
+ if(!S.students.find(s=>s.id===rs))rs=S.students[0].id;
+ const chips=S.students.map(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`).join('');
+ return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Pichle 7 din</button><button data-q="m">Is mahine</button></div>
+ <div class="row"><div><label>Se</label><input type="date" id="fr" value="${from}"></div><div><label>Tak</label><input type="date" id="to" value="${to}"></div></div>
+ <button class="pri" id="mk">PDF banao</button><p class="mu" id="ms">${esc(msg)}</p></div>
+ <div class="wrap">${build()}</div>`;
+}
+function vStu(){
+ const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
+ return `<div class="c"><h2>Teacher ka naam</h2><input data-teacher value="${esc(S.teacher)}"></div>
+ <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
+ <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
+ <div class="c"><h2>Sab bacche</h2>${list}</div>
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
+ <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
+}
+function draw(){
+ document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+ $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():vStu();
+}
+const $v=document.getElementById('v');
+function dlFile(name,blob){
+ const u=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(u),60000);
+}
+async function mkpdf(){
+ const ms=document.getElementById('ms'),el=document.getElementById('rp');
+ ms.textContent='PDF ban rahi hai...';
+ try{
+  const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff'});
+  const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'pt',format:'a4'});
+  const m=20,w=595-2*m,k=w/cv.width,ph=Math.floor((842-2*m)/k);
+  for(let y=0,p=0;y<cv.height;y+=ph,p++){
+   const h=Math.min(ph,cv.height-y),t=document.createElement('canvas');t.width=cv.width;t.height=h;
+   const x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,t.width,h);x.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+   if(p)pdf.addPage();pdf.addImage(t.toDataURL('image/jpeg',0.92),'JPEG',m,m,w,h*k);
+  }
+  const nm=S.students.find(s=>s.id===rs).name.replace(/[^A-Za-z0-9]+/g,'_')||'bacha';
+  const fn='Report_'+nm+'_'+from+'_to_'+to+'.pdf',blob=pdf.output('blob');
+  const f=new File([blob],fn,{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+   try{await navigator.share({files:[f],title:fn});ms.textContent='PDF share ho gayi.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancel hua.';return}}
+  }
+  dlFile(fn,blob);ms.textContent='PDF download ho gayi.';
+ }catch(e){ms.textContent='PDF nahi ban payi, dobara try karo.'}
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(d.tab){tab=d.tab;msg='';draw()}
+ else if(d.sel){sel=d.sel;draw()}
+ else if(d.rs){rs=d.rs;draw()}
+ else if(d.f){setF(d.f,d.v,true);draw()}
+ else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
+ else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p});store();draw()}}
+ else if(b.id==='wa'){
+  const st=S.students.find(s=>s.id===sel),r=R(date,sel);
+  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
+  const t='Namaste, '+st.name+' ka '+fmt(date)+' ka homework:\n'+r.hwtext.trim()+'\n\n- '+S.teacher+' (Tuition Teacher)';
+  let p=st.ph||'';if(p.length===10)p='91'+p;
+  window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
+ }
+ else if(b.id==='mk')mkpdf();
+ else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
+ else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
+});
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(t.dataset.t){setF(t.dataset.t,t.value,false)}
+ else if(t.dataset.teacher!==undefined){S.teacher=t.value;store()}
+ else if(t.dataset.subjects!==undefined){S.subjects=t.value.split(',').map(x=>x.trim()).filter(Boolean);store()}
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.id==='dt'&&t.value){date=t.value;draw()}
+ else if(t.id==='fr'&&t.value){from=t.value;draw()}
+ else if(t.id==='to'&&t.value){to=t.value;draw()}
+ else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
+});
+draw();
+pull();
+try{if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js')}catch(e){}
+</script></body></html>
