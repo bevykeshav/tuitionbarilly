@@ -83,20 +83,22 @@ const today=new Date();
 let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
 const R=(d,s)=>((S.recs[d]||{})[s])||{};
-function setF(f,v,tog){const o=S.recs[date]||(S.recs[date]={});const r=o[sel]||(o[sel]={});r[f]=(tog&&r[f]===v)?'':v;store()}
-function seg(r,f,opts){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}">${l}</button>`).join('')}</div>`}
+function setF(f,v,tog,dd){const dt=dd||date;const o=S.recs[dt]||(S.recs[dt]={});const r=o[sel]||(o[sel]={});r[f]=(tog&&r[f]===v)?'':v;store()}
+function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
+function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
 function vEntry(){
  if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- const st=S.students.find(s=>s.id===sel),r=R(date,sel);
+ const st=S.students.find(s=>s.id===sel),r=R(date,sel),pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
  const full=r.att!=='A';
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
+ ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg(R(pv,sel),'hw',[['Y','Yes'],['N','No']],pv)}</div>`:''}
  <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
  <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
  <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
- ${full?`<label>Homework karke laye?</label>${seg(r,'hw',[['Y','Yes'],['N','No']])}
+ ${full?`
  <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
  <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
  <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
@@ -114,7 +116,7 @@ function build(){
  const rows=stats(rs);
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${col(H[r.hw],r.hw==='Y')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
@@ -176,7 +178,7 @@ document.addEventListener('click',async e=>{
  if(d.tab){tab=d.tab;msg='';draw()}
  else if(d.sel){sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
- else if(d.f){setF(d.f,d.v,true);draw()}
+ else if(d.f){setF(d.f,d.v,true,d.pd);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p});store();draw()}}
