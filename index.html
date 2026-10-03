@@ -34,7 +34,7 @@ textarea{min-height:72px}
 .pri{background:var(--ac);color:var(--on);border-color:var(--ac);width:100%;font-weight:600}
 .mu{color:var(--mu);font-size:14px}
 .wrap{overflow-x:auto;border:1px solid var(--ln);border-radius:10px}
-.rp{width:720px;background:#fff;color:#111;padding:24px;font-family:system-ui,"Segoe UI",Roboto,sans-serif;font-size:13px}
+.rp{width:800px;background:#fff;color:#111;padding:24px;font-family:system-ui,"Segoe UI",Roboto,sans-serif;font-size:13px}
 .rp h1{font-size:20px;margin:0 0 8px}.rp p{margin:2px 0}
 .rp table{width:100%;border-collapse:collapse;margin:12px 0}
 .rp th,.rp td{border:1px solid #444;padding:6px;text-align:left;vertical-align:top}
@@ -98,15 +98,28 @@ function vEntry(){
  <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
  <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
  <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
+ <label>Homework ki photo (notebook ya book)</label>
+ ${PH[pk(date,sel)]?`<img src="${PH[pk(date,sel)]}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="del">Photo hatao</button>`:''}
+ <input type="file" id="pf" accept="image/*">
  ${full?`
  <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
  <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
+ <label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>
  <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
  <label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>`;
 }
+let _db=null;
+function idb(){return _db||(_db=new Promise((ok,no)=>{try{const q=indexedDB.open('tms',1);q.onupgradeneeded=()=>q.result.createObjectStore('p');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}}))}
+async function pget(k){const d=await idb();return new Promise(ok=>{const r=d.transaction('p').objectStore('p').get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}
+async function pput(k,v){const d=await idb();return new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=()=>ok(true);t.onerror=()=>ok(false)})}
+const PH={},pk=(d,s)=>d+'|'+s;
+async function ensure(keys){let got=false;for(const k of keys){if(!(k in PH)){try{PH[k]=await pget(k)}catch(e){PH[k]=null}if(PH[k])got=true}}if(got)draw()}
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=no;im.src=u})}
+const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return m&&+m[2]>0?+m[1]/+m[2]*100:null};
+function tCell(r){if(!r.tsub&&!r.tmk)return '-';const p=pct(r);const mk=r.tmk?(p===null?esc(r.tmk):col(esc(r.tmk),p>=40)):'';return (r.tsub?esc(r.tsub)+(mk?'<br>':''):'')+mk}
 function stats(sid){
  const rows=[],a=new Date(from+'T00:00:00');
- for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext)rows.push([d,r])}
+ for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext||r.tsub||r.tmk)rows.push([d,r])}
  return rows;
 }
 const col=(t,ok)=>t?`<span class="${ok?'g':'r'}">${t}</span>`:'-';
@@ -116,12 +129,14 @@ function build(){
  const rows=stats(rs);
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}${PH[pk(d,rs)]?'<img src="'+PH[pk(d,rs)]+'" style="width:90px;display:block;margin:4px 0;border:1px solid #444">':''}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${tCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
- <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Rating</th><th>Note</th></tr>${body}</table>
+ <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
  <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
+ <p>Test liye: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
  <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
 }
 function vRep(){
@@ -145,6 +160,8 @@ function vStu(){
 function draw(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():vStu();
+ if(tab==='entry'&&sel)ensure([pk(date,sel)]);
+ else if(tab==='rep'&&rs)ensure(stats(rs).map(x=>pk(x[0],rs)));
 }
 const $v=document.getElementById('v');
 function dlFile(name,blob){
@@ -178,6 +195,7 @@ document.addEventListener('click',async e=>{
  if(d.tab){tab=d.tab;msg='';draw()}
  else if(d.sel){sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
+ else if(d.ph==='del'){const k=pk(date,sel);PH[k]=null;pput(k,null);draw()}
  else if(d.f){setF(d.f,d.v,true,d.pd);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
@@ -202,6 +220,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target;
  if(t.id==='dt'&&t.value){date=t.value;draw()}
+ else if(t.id==='pf'&&t.files[0]){const k=pk(date,sel);shrink(t.files[0]).then(u=>{PH[k]=u;return pput(k,u)}).then(()=>draw()).catch(()=>{})}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
