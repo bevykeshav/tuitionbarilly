@@ -91,7 +91,12 @@ const today=new Date();
 let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
 const R=(d,s)=>((S.recs[d]||{})[s])||{};
-let dr={},dk='',dhw,dph,dirty=false;
+let dr={},dk='',dhw,dph={},dirty=false;
+const KP=['hw','wk','ts'];
+const pkk=(d,s,kd)=>kd==='hw'?d+'|'+s:d+'|'+s+'|'+kd;
+function phv(kd){return dph[kd]!==undefined?dph[kd]:PH[pkk(date,sel,kd)]}
+function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<img src="${u}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="${kd}">Photo hatao</button>`:''}<input type="file" data-pf="${kd}" accept="image/*">`}
+function imgH(kd,d){const u=PH[pkk(d,rs,kd)];return u?'<img src="'+u+'" style="width:100px;display:block;margin:4px 0;border:1px solid #444">':''}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
 function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';return true}return false}
@@ -99,7 +104,7 @@ function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined)S.recs[p0][sel].hw=dhw;
  store();
- if(dph!==undefined){const k=pk(date,sel);PH[k]=dph;pput(k,dph);dph=undefined}
+ for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd);PH[k]=dph[kd];pput(k,dph[kd])}}dph={};
  dirty=false;draw();
  const e=document.getElementById('sv');if(e){e.textContent='Save ho gaya';e.className='mu'}
 }
@@ -111,20 +116,20 @@ function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][s
 function vEntry(){
  if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dph=undefined;dirty=false}
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dph={};dirty=false}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
- const full=r.att!=='A',ph=dph!==undefined?dph:PH[pk(date,sel)];
+ const full=r.att!=='A';
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
  <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
- <div class="fb"><label>Homework ki photo (notebook ya book)</label>${ph?`<img src="${ph}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="del">Photo hatao</button>`:''}<input type="file" id="pf" accept="image/*"></div>
- ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea></div>
+ <div class="fb">${photoUI('hw','Homework ki photo (notebook ya book)')}</div>
+ ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>${photoUI('wk','Tuition par kya kiya ki photo')}</div>
  <div class="fb"><label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}</div>
- <div class="fb"><label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div></div>
+ <div class="fb"><label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>${photoUI('ts','Test ya marks ki photo')}</div>
  <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
  <div class="fb"><label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>
  </div></div>
@@ -136,7 +141,7 @@ async function pget(k){const d=await idb();return new Promise(ok=>{const r=d.tra
 async function pput(k,v){const d=await idb();return new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=()=>ok(true);t.onerror=()=>ok(false)})}
 const PH={},pk=(d,s)=>d+'|'+s;
 async function ensure(keys){let got=false;for(const k of keys){if(!(k in PH)){try{PH[k]=await pget(k)}catch(e){PH[k]=null}if(PH[k])got=true}}if(got)draw()}
-function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=no;im.src=u})}
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=no;im.src=u})}
 const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return m&&+m[2]>0?+m[1]/+m[2]*100:null};
 function tCell(r){if(!r.tsub&&!r.tmk)return '-';const p=pct(r);const mk=r.tmk?(p===null?esc(r.tmk):col(esc(r.tmk),p>=40)):'';return (r.tsub?esc(r.tsub)+(mk?'<br>':''):'')+mk}
 function stats(sid){
@@ -152,7 +157,7 @@ function build(){
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}${PH[pk(d,rs)]?'<img src="'+PH[pk(d,rs)]+'" style="width:90px;display:block;margin:4px 0;border:1px solid #444">':''}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${esc(r.work)||'-'}</td><td>${nbCell(r)}</td><td>${tCell(r)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+esc(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
@@ -181,8 +186,8 @@ function vStu(){
 function draw(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():vStu();
- if(tab==='entry'&&sel)ensure([pk(date,sel)]);
- else if(tab==='rep'&&rs)ensure(stats(rs).map(x=>pk(x[0],rs)));
+ if(tab==='entry'&&sel)ensure(KP.map(kd=>pkk(date,sel,kd)));
+ else if(tab==='rep'&&rs)ensure(stats(rs).flatMap(x=>KP.map(kd=>pkk(x[0],rs,kd))));
 }
 const $v=document.getElementById('v');
 function dlFile(name,blob){
@@ -216,7 +221,7 @@ document.addEventListener('click',async e=>{
  if(d.tab){if(!okLeave())return;tab=d.tab;msg='';draw()}
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
- else if(d.ph==='del'){dph=null;mark();draw()}
+ else if(d.ph){dph[d.ph]=null;mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
@@ -242,7 +247,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target;
  if(t.id==='dt'&&t.value){if(!okLeave()){draw();return}date=t.value;draw()}
- else if(t.id==='pf'&&t.files[0]){const k=pk(date,sel);shrink(t.files[0]).then(u=>{dph=u;mark();draw()}).catch(()=>{})}
+ else if(t.dataset.pf&&t.files[0]){const kd=t.dataset.pf;shrink(t.files[0]).then(u=>{dph[kd]=u;mark();draw()}).catch(()=>{})}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
