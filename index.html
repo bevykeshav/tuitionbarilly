@@ -150,12 +150,22 @@ function summaryText(){
  const rows=stats(rs),c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const nb=rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0);
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const L=['Namaste, '+st.name+' (Class '+st.cls+') ki report',fmt(from)+' se '+fmt(to),'',
-  'Present: '+c('att','P')+' din, Absent: '+c('att','A')+' din',
-  'Homework karke laye: '+c('hw','Y')+' baar Yes, '+c('hw','N')+' baar No',
-  'Notebook school me jama: '+nb+' baar'];
- if(tn)L.push('Test liye: '+tn+(ta===null?'':', average '+ta+'%'));
- L.push('Rating: Bad '+c('rt','Bad')+', Good '+c('rt','Good')+', Better '+c('rt','Better')+', Best '+c('rt','Best'));
+ const P=c('att','P'),A=c('att','A'),hy=c('hw','Y'),hn=c('hw','N'),bad=c('rt','Bad'),good=c('rt','Good')+c('rt','Better')+c('rt','Best');
+ const pos=[],neg=[];
+ if(P)pos.push('\u2705 Present: '+P+' din');
+ if(hy)pos.push('\u2705 Homework karke laye: '+hy+' baar');
+ if(tn&&(ta===null||ta>=40))pos.push('\u2705 Test: '+tn+' liye'+(ta===null?'':', average '+ta+'%'));
+ if(good)pos.push('\u2705 Achhi rating (Good/Better/Best): '+good+' baar');
+ if(A)neg.push('\u274C Absent: '+A+' din');
+ if(hn){neg.push('\u274C Homework nahi laye: '+hn+' baar');
+  rows.filter(x=>x[1].hw==='N'&&x[1].hwnote).slice(0,3).forEach(x=>neg.push('     Karan ('+fmt(x[0]).slice(0,5)+'): '+String(x[1].hwnote).trim().slice(0,60)))}
+ if(nb)neg.push('\u274C Notebook school me jama thi: '+nb+' baar');
+ if(tn&&ta!==null&&ta<40)neg.push('\u274C Test average kam: '+ta+'%');
+ if(bad)neg.push('\u274C Kamzor rating (Bad): '+bad+' baar');
+ const L=['*'+st.name+' (Class '+st.cls+') ki Report*',fmt(from)+' se '+fmt(to),''];
+ if(pos.length)L.push('*Achhi baatein*',...pos,'');
+ L.push('*Dhyan dene wali baatein*');
+ if(neg.length)L.push(...neg);else L.push('Is period me koi dikkat nahi.');
  L.push('','Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
