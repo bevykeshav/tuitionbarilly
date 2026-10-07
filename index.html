@@ -145,6 +145,20 @@ function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(f
 function hint(t){const ls=String(t||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);let o=ls.slice(0,2).join('\n'),cut=ls.length>2;if(o.length>70){o=o.slice(0,70).replace(/\s+\S*$/,'');cut=true}return esc(o).replace(/\n/g,'<br>')+(cut?' ...':'')}
 const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return m&&+m[2]>0?+m[1]/+m[2]*100:null};
 function tCell(r){if(!r.tsub&&!r.tmk)return '-';const p=pct(r);const mk=r.tmk?(p===null?esc(r.tmk):col(esc(r.tmk),p>=40)):'';return (r.tsub?esc(r.tsub)+(mk?'<br>':''):'')+mk}
+function summaryText(){
+ const st=S.students.find(s=>s.id===rs);if(!st)return '';
+ const rows=stats(rs),c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
+ const nb=rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0);
+ const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
+ const L=['Namaste, '+st.name+' (Class '+st.cls+') ki report',fmt(from)+' se '+fmt(to),'',
+  'Present: '+c('att','P')+' din, Absent: '+c('att','A')+' din',
+  'Homework karke laye: '+c('hw','Y')+' baar Yes, '+c('hw','N')+' baar No',
+  'Notebook school me jama: '+nb+' baar'];
+ if(tn)L.push('Test liye: '+tn+(ta===null?'':', average '+ta+'%'));
+ L.push('Rating: Bad '+c('rt','Bad')+', Good '+c('rt','Good')+', Better '+c('rt','Better')+', Best '+c('rt','Best'));
+ L.push('','Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
+ return L.join('\n');
+}
 function stats(sid){
  const rows=[],a=new Date(from+'T00:00:00');
  for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext||r.tsub||r.tmk)rows.push([d,r])}
@@ -173,7 +187,9 @@ function vRep(){
  const chips=S.students.map(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`).join('');
  return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Pichle 7 din</button><button data-q="m">Is mahine</button></div>
  <div class="row"><div><label>Se</label><input type="date" id="fr" value="${from}"></div><div><label>Tak</label><input type="date" id="to" value="${to}"></div></div>
- <button class="pri" id="mk">PDF banao</button><p class="mu" id="ms">${esc(msg)}</p></div>
+ <button class="pri" id="mk">PDF banao aur bhejo</button><p class="mu" id="ms">${esc(msg)}</p>
+ <label>PDF ke saath ye summary message bhi jayega</label><div class="mu" style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:10px">${esc(summaryText())}</div>
+ <div class="seg" style="margin-top:8px"><button id="sw">Sirf summary WhatsApp par</button><button id="sc">Summary copy karo</button></div></div>
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
@@ -212,7 +228,7 @@ async function mkpdf(){
   const fn='Report_'+nm+'_'+from+'_to_'+to+'.pdf',blob=pdf.output('blob');
   const f=new File([blob],fn,{type:'application/pdf'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){
-   try{await navigator.share({files:[f],title:fn});ms.textContent='PDF share ho gayi.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancel hua.';return}}
+   try{await navigator.share({files:[f],title:fn,text:summaryText()});ms.textContent='PDF share ho gayi.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancel hua.';return}}
   }
   dlFile(fn,blob);ms.textContent='PDF download ho gayi.';
  }catch(e){ms.textContent='PDF nahi ban payi, dobara try karo.'}
@@ -235,6 +251,8 @@ document.addEventListener('click',async e=>{
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
  }
  else if(b.id==='mk')mkpdf();
+ else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);let p=(st&&st.ph)||'';if(p.length===10)p='91'+p;window.open('https://wa.me/'+p+'?text='+encodeURIComponent(summaryText()),'_blank')}
+ else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copy ho gaya'}catch(x){b.textContent='Copy nahi hua'}}
  else if(b.id==='svb')doSave();
  else if(b.id==='md'){MODE=MODE==='desk'?'phone':'desk';try{localStorage.setItem('tms_mode',MODE)}catch(x){}applyMode();draw()}
  else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);store();b.textContent='Save ho gaya'}
