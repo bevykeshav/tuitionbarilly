@@ -34,6 +34,14 @@ textarea{min-height:72px}
 .pri{background:var(--ac);color:var(--on);border-color:var(--ac);width:100%;font-weight:600}
 .mu{color:var(--mu);font-size:14px}
 .wrap{overflow-x:auto;border:1px solid var(--ln);border-radius:10px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px}
+.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.warn{color:#d9433f;font-weight:600}
+.sb{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;background:var(--bg);padding:10px 0;border-top:1px solid var(--ln);margin-top:10px}
+.sb .pri{width:auto;flex:1}
+.desk body{max-width:1100px}
+.desk .chips{flex-wrap:wrap;overflow:visible}
+.desk .fg{display:grid;grid-template-columns:1fr 1fr;column-gap:24px}
 .rp{width:800px;background:#fff;color:#111;padding:24px;font-family:system-ui,"Segoe UI",Roboto,sans-serif;font-size:13px}
 .rp h1{font-size:20px;margin:0 0 8px}.rp p{margin:2px 0}
 .rp table{width:100%;border-collapse:collapse;margin:12px 0}
@@ -42,7 +50,7 @@ textarea{min-height:72px}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
-<div class="mu" id="sy"></div>
+<div class="bar"><span class="mu" id="sy"></span><button class="sm" id="md"></button></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -70,7 +78,7 @@ async function pull(){
   const r=await call({a:'get'});
   if(!r.ok){sy('Cloud: error, link check karo');return}
   const rt=r.data?(r.data.ts||0):0;
-  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();draw();sy('Cloud se data aa gaya')}
+  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Cloud se data aa gaya')}
   else if((S.ts||0)>rt){await doPush()}
   else sy('Cloud: sab up to date')
  }catch(e){sy('Cloud: net nahi hai')}
@@ -83,30 +91,44 @@ const today=new Date();
 let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
 const R=(d,s)=>((S.recs[d]||{})[s])||{};
-function setF(f,v,tog,dd){const dt=dd||date;const o=S.recs[dt]||(S.recs[dt]={});const r=o[sel]||(o[sel]={});r[f]=(tog&&r[f]===v)?'':v;store()}
+let dr={},dk='',dhw,dph,dirty=false;
+function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
+function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
+function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';return true}return false}
+function doSave(){
+ const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
+ const p0=prevHw(sel,date);if(p0&&dhw!==undefined)S.recs[p0][sel].hw=dhw;
+ store();
+ if(dph!==undefined){const k=pk(date,sel);PH[k]=dph;pput(k,dph);dph=undefined}
+ dirty=false;draw();
+ const e=document.getElementById('sv');if(e){e.textContent='Save ho gaya';e.className='mu'}
+}
+let MODE='';try{MODE=localStorage.getItem('tms_mode')||''}catch(e){}
+if(!MODE)MODE=(screen.width>=900)?'desk':'phone';
+function applyMode(){document.documentElement.classList.toggle('desk',MODE==='desk');const m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content',MODE==='desk'?'width=1100, viewport-fit=cover':'width=device-width, initial-scale=1, viewport-fit=cover');const b=document.getElementById('md');if(b)b.textContent=MODE==='desk'?'Phone mode':'Desktop mode'}
 function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
 function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
 function vEntry(){
  if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- const st=S.students.find(s=>s.id===sel),r=R(date,sel),pv=prevHw(sel,date);
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dph=undefined;dirty=false}
+ const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
- const full=r.att!=='A';
+ const full=r.att!=='A',ph=dph!==undefined?dph:PH[pk(date,sel)];
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
- ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg(R(pv,sel),'hw',[['Y','Yes'],['N','No']],pv)}</div>`:''}
- <label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}
- <label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea>
- <button class="pri" id="wa">Homework WhatsApp par bhejo</button>
- <label>Homework ki photo (notebook ya book)</label>
- ${PH[pk(date,sel)]?`<img src="${PH[pk(date,sel)]}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="del">Photo hatao</button>`:''}
- <input type="file" id="pf" accept="image/*">
- ${full?`
- <label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>
- <label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}
- <label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>
- <label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}`:''}
- <label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>`;
+ ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}</div>`:''}
+ <div class="fg">
+ <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
+ <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
+ <div class="fb"><label>Homework ki photo (notebook ya book)</label>${ph?`<img src="${ph}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="del">Photo hatao</button>`:''}<input type="file" id="pf" accept="image/*"></div>
+ ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea></div>
+ <div class="fb"><label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}</div>
+ <div class="fb"><label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div></div>
+ <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
+ <div class="fb"><label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>
+ </div></div>
+ <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Save nahi hua':'Save ho chuka hai'}</span><button class="pri" id="svb">Save karo</button></div>`;
 }
 let _db=null;
 function idb(){return _db||(_db=new Promise((ok,no)=>{try{const q=indexedDB.open('tms',1);q.onupgradeneeded=()=>q.result.createObjectStore('p');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}}))}
@@ -150,8 +172,7 @@ function vRep(){
 }
 function vStu(){
  const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
- return `<div class="c"><h2>Teacher ka naam</h2><input data-teacher value="${esc(S.teacher)}"></div>
- <div class="c"><h2>Notebook ke subject</h2><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p></div>
+ return `<div class="c"><h2>Settings</h2><label>Teacher ka naam</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook ke subject</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p><button class="pri" id="ss">Settings save karo</button></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
  <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
@@ -192,39 +213,41 @@ async function mkpdf(){
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
- if(d.tab){tab=d.tab;msg='';draw()}
- else if(d.sel){sel=d.sel;draw()}
+ if(d.tab){if(!okLeave())return;tab=d.tab;msg='';draw()}
+ else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
- else if(d.ph==='del'){const k=pk(date,sel);PH[k]=null;pput(k,null);draw()}
- else if(d.f){setF(d.f,d.v,true,d.pd);draw()}
+ else if(d.ph==='del'){dph=null;mark();draw()}
+ else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p});store();draw()}}
  else if(b.id==='wa'){
-  const st=S.students.find(s=>s.id===sel),r=R(date,sel);
+  const st=S.students.find(s=>s.id===sel),r=dr;
   if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
   const t='Namaste, '+st.name+' ka '+fmt(date)+' ka homework:\n'+r.hwtext.trim()+'\n\n- '+S.teacher+' (Tuition Teacher)';
   let p=st.ph||'';if(p.length===10)p='91'+p;
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
  }
  else if(b.id==='mk')mkpdf();
+ else if(b.id==='svb')doSave();
+ else if(b.id==='md'){MODE=MODE==='desk'?'phone':'desk';try{localStorage.setItem('tms_mode',MODE)}catch(x){}applyMode();draw()}
+ else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);store();b.textContent='Save ho gaya'}
  else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
  else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
 });
 document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.t){setF(t.dataset.t,t.value,false)}
- else if(t.dataset.teacher!==undefined){S.teacher=t.value;store()}
- else if(t.dataset.subjects!==undefined){S.subjects=t.value.split(',').map(x=>x.trim()).filter(Boolean);store()}
 });
 document.addEventListener('change',e=>{
  const t=e.target;
- if(t.id==='dt'&&t.value){date=t.value;draw()}
- else if(t.id==='pf'&&t.files[0]){const k=pk(date,sel);shrink(t.files[0]).then(u=>{PH[k]=u;return pput(k,u)}).then(()=>draw()).catch(()=>{})}
+ if(t.id==='dt'&&t.value){if(!okLeave()){draw();return}date=t.value;draw()}
+ else if(t.id==='pf'&&t.files[0]){const k=pk(date,sel);shrink(t.files[0]).then(u=>{dph=u;mark();draw()}).catch(()=>{})}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
 });
+applyMode();
 draw();
 pull();
 try{if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js')}catch(e){}
