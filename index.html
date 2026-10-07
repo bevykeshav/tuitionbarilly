@@ -91,7 +91,7 @@ const today=new Date();
 let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
 const R=(d,s)=>((S.recs[d]||{})[s])||{};
-let dr={},dk='',dhw,dph={},dirty=false;
+let dr={},dk='',dhw,dhn='',dph={},dirty=false;
 const KP=['hw','wk','ts'];
 const pkk=(d,s,kd)=>kd==='hw'?d+'|'+s:d+'|'+s+'|'+kd;
 function phv(kd){return dph[kd]!==undefined?dph[kd]:PH[pkk(date,sel,kd)]}
@@ -102,7 +102,7 @@ function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
 function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';return true}return false}
 function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
- const p0=prevHw(sel,date);if(p0&&dhw!==undefined)S.recs[p0][sel].hw=dhw;
+ const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
  store();
  for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd);PH[k]=dph[kd];pput(k,dph[kd])}}dph={};
  dirty=false;draw();
@@ -116,13 +116,13 @@ function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][s
 function vEntry(){
  if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dph={};dirty=false}
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
  const full=r.att!=='A';
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
- ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}</div>`:''}
+ ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Kyu nahi kiya? (bacche ka karan)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
  <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
@@ -158,7 +158,7 @@ function build(){
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}${r.hwnote?'<br>Karan: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
@@ -244,6 +244,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.t){setF(t.dataset.t,t.value,false)}
+ else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
 });
 document.addEventListener('change',e=>{
  const t=e.target;
