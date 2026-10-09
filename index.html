@@ -88,7 +88,7 @@ const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice
 const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today=new Date();
-let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='';
+let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='',editId=null;
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
 const R=(d,s)=>((S.recs[d]||{})[s])||{};
 let dr={},dk='',dhw,dhn='',dph={},dirty=false;
@@ -203,7 +203,7 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Naam" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent ka WhatsApp number"></div><div class="seg"><button class="on" id="esave">Save karo</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph):''}</span></div><button data-edit="${s.id}">Badlo</button><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
  return `<div class="c"><h2>Settings</h2><label>Teacher ka naam</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook ke subject</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p><button class="pri" id="ss">Settings save karo</button></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><button class="pri" id="add">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
@@ -245,7 +245,8 @@ async function mkpdf(){
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
- if(d.tab){if(!okLeave())return;tab=d.tab;msg='';draw()}
+ if(d.tab){if(!okLeave())return;tab=d.tab;msg='';editId=null;draw()}
+ else if(d.edit){editId=d.edit;pend=null;draw()}
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
  else if(d.ph){dph[d.ph]=null;mark();draw()}
@@ -261,6 +262,8 @@ document.addEventListener('click',async e=>{
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
  }
  else if(b.id==='mk')mkpdf();
+ else if(b.id==='ecancel'){editId=null;draw()}
+ else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);let p=(st&&st.ph)||'';if(p.length===10)p='91'+p;window.open('https://wa.me/'+p+'?text='+encodeURIComponent(summaryText()),'_blank')}
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copy ho gaya'}catch(x){b.textContent='Copy nahi hua'}}
  else if(b.id==='svb')doSave();
