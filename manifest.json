@@ -1,9 +1,9 @@
 {
-  "id": "tuition-report-keshav",
+  "id": "tuition-app-2026",
   "name": "Tuition Report",
   "short_name": "Tuition",
   "description": "Bacchon ki daily entry aur parents ke liye PDF report",
-  "start_url": "./",
+  "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

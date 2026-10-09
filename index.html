@@ -50,7 +50,7 @@ textarea{min-height:72px}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
-<div class="bar"><span class="mu" id="sy"></span><button class="sm" id="md"></button></div>
+<div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">App install karo</button> <button class="sm" id="md"></button></span></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -83,6 +83,9 @@ async function pull(){
   else sy('Cloud: sab up to date')
  }catch(e){sy('Cloud: net nahi hai')}
 }
+let ip=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;const b=document.getElementById('ib');if(b)b.style.display=''});
+window.addEventListener('appinstalled',()=>{ip=null;const b=document.getElementById('ib');if(b)b.style.display='none'});
 window.addEventListener('online',()=>{if(again)push()});
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
@@ -262,6 +265,7 @@ document.addEventListener('click',async e=>{
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(t),'_blank');
  }
  else if(b.id==='mk')mkpdf();
+ else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
  else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);let p=(st&&st.ph)||'';if(p.length===10)p='91'+p;window.open('https://wa.me/'+p+'?text='+encodeURIComponent(summaryText()),'_blank')}

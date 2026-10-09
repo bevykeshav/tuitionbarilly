@@ -1,4 +1,4 @@
-const C='tuition-v1';
+const C='tuition-v2';
 const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png',
 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
