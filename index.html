@@ -17,7 +17,8 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:0 12px 40px}
 .tabs{display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5}
-.tabs button{flex:1}
+.tabs button{flex:1;font-size:14px;padding:10px 4px}
+.bar2{height:10px;border-radius:6px;background:var(--ln);overflow:hidden;margin:8px 0}.bar2>i{display:block;height:100%;background:var(--ac)}
 button,input,textarea{font:inherit;color:var(--tx)}
 button{border:1px solid var(--ln);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px}
 button.on,.tabs button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
@@ -49,7 +50,7 @@ textarea{min-height:72px}
 .rp th{background:#e8e8e8}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
 </style></head><body>
-<div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="stu">Bacche</button></div>
+<div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Bacche</button></div>
 <div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">App install karo</button> <button class="sm" id="md"></button></span></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -102,7 +103,7 @@ function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<
 function imgH(kd,d){const u=PH[pkk(d,rs,kd)];return u?'<img src="'+u+'" style="width:100px;display:block;margin:4px 0;border:1px solid #444">':''}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
-function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';return true}return false}
+function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
 function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
@@ -169,6 +170,8 @@ function summaryText(){
  if(pos.length)L.push('*Achhi baatein*',...pos,'');
  L.push('*Dhyan dene wali baatein*');
  if(neg.length)L.push(...neg);else L.push('Is period me koi dikkat nahi.');
+ const sy=sylInfo(rs);
+ if(sy.length){L.push('','*Syllabus*');sy.forEach(x=>{L.push(x.n+': '+x.d+'/'+x.t+' topic ho gaye ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' baaki');if(x.per.length)L.push('Is period me hue: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
  L.push('','Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
@@ -181,6 +184,52 @@ function waUrl(st,text){
 }
 function waOpen(st,text){const u=waUrl(st,text);if(u.startsWith('intent:'))location.href=u;else window.open(u,'_blank')}
 function wtSeg(cur,f){return `<div class="seg">${[['w','WhatsApp'],['b','Business']].map(([v,l])=>`<button class="${cur===v?'on':''}" data-wt="${v}" data-wtf="${f}">${l}</button>`).join('')}</div>`}
+
+const SY=()=>S.syl||(S.syl=[]);
+let sylSel=null,sd=null,sylF='all',editTxt=false,editStu=[],newStu=null;
+function parseSyl(txt,old){
+ const keep={};(old||[]).forEach(sb=>sb.items.forEach(it=>{if(it.d)keep[sb.n+'||'+it.t]=it.d}));
+ const subs=[];let cur=null;
+ String(txt||'').split(/\r?\n/).forEach(l=>{
+  l=l.trim();if(!l)return;
+  const m=l.match(/^#+\s*(.+)$/);
+  if(m){cur={n:m[1].trim(),items:[]};subs.push(cur);return}
+  if(!cur){cur={n:'General',items:[]};subs.push(cur)}
+  const t=l.replace(/^[-*\u2022]+\s*/,'').trim();if(t)cur.items.push({t,d:keep[cur.n+'||'+t]||''});
+ });
+ return subs.filter(x=>x.items.length);
+}
+const toTxt=y=>y.subs.map(x=>'# '+x.n+'\n'+x.items.map(i=>i.t).join('\n')).join('\n\n');
+const sylTot=y=>{let d=0,t=0;y.subs.forEach(x=>x.items.forEach(i=>{t++;if(i.d)d++}));return [d,t]};
+const stuNames=ids=>S.students.filter(s=>(ids||[]).includes(s.id)).map(s=>s.name).join(', ')||'Koi nahi';
+function stuChips(arr,attr){return S.students.map(s=>`<button class="chip ${arr.includes(s.id)?'on':''}" ${attr}="${s.id}">${esc(s.name)}</button>`).join('')}
+function sylInfo(sid){return SY().filter(x=>(x.stu||[]).includes(sid)).map(x=>{const [d,t]=sylTot(x);const per=[];x.subs.forEach(sb=>sb.items.forEach(i=>{if(i.d&&i.d>=from&&i.d<=to)per.push(sb.n+': '+i.t)}));return {n:x.name,d,t,per}}).filter(x=>x.t)}
+const SPROMPT="Is syllabus PDF ko plain text mein badlo. Har subject ka naam alag line par '# ' laga ke likho (jaise '# Math'). Uske neeche har chapter ya topic ek alag line par likho. Table, extra explanation ya heading mat dena, sirf yahi format. Example:\n# Math\nChapter 1: Numbers\nChapter 2: Addition\n\n# Hindi\nPaath 1: Kavita\nPaath 2: Kahani";
+function vSyl(){
+ if(sylSel&&sd){
+  const [dn,tt]=sylTot(sd),pc=tt?Math.round(dn*100/tt):0;
+  const subs=sd.subs.map((sb,si)=>{
+   const its=sb.items.map((it,ii)=>({it,ii})).filter(x=>sylF==='all'||!x.it.d);if(!its.length)return '';
+   const sdn=sb.items.filter(i=>i.d).length;
+   return `<div class="c"><h2>${esc(sb.n)} <span class="mu">${sdn}/${sb.items.length} ho gaya</span></h2>${its.map(({it,ii})=>`<div class="row"><div style="${it.d?'text-decoration:line-through;opacity:.6':''}">${esc(it.t)}${it.d?` <span class="mu">(${fmt(it.d)})</span>`:''}</div><button class="${it.d?'on':''}" data-ti="${si}.${ii}" style="min-width:84px">${it.d?'Ho gaya':'Baaki'}</button></div>`).join('')}</div>`}).join('');
+  const ed=editTxt?`<div class="c"><h2>Text badlo</h2><p class="mu">Jo topic pehle ho chuke hain wo wahi rahenge agar naam same ho.</p><textarea data-sxe style="min-height:160px">${esc(toTxt(sd))}</textarea><label>Kin bacchon ke liye</label><div class="chips" style="flex-wrap:wrap">${stuChips(editStu,'data-es')}</div><div class="seg" style="margin-top:10px"><button class="on" id="sxapply">Badlo</button><button id="sxcancel">Cancel</button></div></div>`:'';
+  return `<div class="c"><div class="row"><div><h2 style="margin:0">${esc(sd.name)}</h2></div><button data-sylback="1">Wapas</button></div>
+  <p class="mu">Lagu: ${esc(stuNames(sd.stu))}</p><b>Ho gaya ${dn}/${tt} (${pc}%)</b> <span class="mu">| Baaki ${tt-dn}</span><div class="bar2"><i style="width:${pc}%"></i></div>
+  <div class="seg"><button class="${sylF==='all'?'on':''}" data-sf="all">Sab topic</button><button class="${sylF==='pend'?'on':''}" data-sf="pend">Sirf baaki</button></div>
+  <div class="seg" style="margin-top:8px"><button data-sedit="1">Text / bacche badlo</button><button data-sdel="1">${pend==='syl'?'Pakka hatao?':'Syllabus hatao'}</button></div></div>
+  ${ed}${subs||'<div class="c">Sab topic ho gaye.</div>'}
+  <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Save nahi hua':'Save ho chuka hai'}</span><button class="pri" id="ssv">Save karo</button></div>`;
+ }
+ const list=SY().map(y=>{const [d,t]=sylTot(y),pc=t?Math.round(d*100/t):0;return `<div class="c"><h2>${esc(y.name)}</h2><p class="mu" style="margin:2px 0">Lagu: ${esc(stuNames(y.stu))}</p><b>Ho gaya ${d}/${t} (${pc}%)</b> <span class="mu">| Baaki ${t-d}</span><div class="bar2"><i style="width:${pc}%"></i></div><button class="pri" data-sopen="${y.id}">Kholo</button></div>`}).join('')||'<div class="c mu">Abhi koi syllabus nahi hai. Neeche naya jodo.</div>';
+ const ns=newStu||S.students.map(s=>s.id);
+ return `${list}<div class="c"><h2>Naya syllabus jodo</h2>
+ <p class="mu">1. Syllabus PDF Claude ko do aur neeche wala prompt bhejo.<br>2. Claude ka text yahan paste karo.</p>
+ <button id="sprompt" style="width:100%">Claude ke liye prompt copy karo</button>
+ <label>Syllabus ka naam</label><input data-sn placeholder="jaise Class 3 Half Yearly">
+ <label>Claude ka text yahan paste karo</label><textarea data-sx style="min-height:150px" placeholder="# Math&#10;Chapter 1: Numbers&#10;Chapter 2: Addition&#10;&#10;# Hindi&#10;Paath 1: Kavita"></textarea>
+ <label>Kin bacchon ke liye</label><div class="chips" style="flex-wrap:wrap">${stuChips(ns,'data-ns')}</div>
+ <button class="pri" id="snew" style="margin-top:10px">Syllabus banao</button><p class="mu" id="smsg"></p></div>`;
+}
 function stats(sid){
  const rows=[],a=new Date(from+'T00:00:00');
  for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext||r.tsub||r.tmk)rows.push([d,r])}
@@ -200,6 +249,7 @@ function build(){
  <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
  <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
  <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
+ ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topic ho gaye (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} baaki.${x.per.length?'<br>Is period me hue: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
  <p>Test liye: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
  <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
 }
@@ -224,7 +274,7 @@ function vStu(){
 }
 function draw(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
- $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():vStu();
+ $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():tab==='syl'?vSyl():vStu();
  if(tab==='entry'&&sel)ensure(KP.map(kd=>pkk(date,sel,kd)));
  else if(tab==='rep'&&rs)ensure(stats(rs).flatMap(x=>KP.map(kd=>pkk(x[0],rs,kd))));
 }
@@ -274,6 +324,19 @@ document.addEventListener('click',async e=>{
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
+ else if(d.sopen){if(!okLeave())return;const o=SY().find(x=>x.id===d.sopen);sylSel=o?o.id:null;sd=o?JSON.parse(JSON.stringify(o)):null;sylF='all';editTxt=false;pend=null;dirty=false;draw()}
+ else if(d.sylback){if(!okLeave())return;sylSel=null;sd=null;editTxt=false;pend=null;draw()}
+ else if(d.sf){sylF=d.sf;draw()}
+ else if(d.ti){const [si,ii]=d.ti.split('.').map(Number),it=sd.subs[si].items[ii];it.d=it.d?'':iso(new Date());mark();draw()}
+ else if(d.sedit){editTxt=true;editStu=[...(sd.stu||[])];draw()}
+ else if(d.es){b.classList.toggle('on');editStu=editStu.includes(d.es)?editStu.filter(x=>x!==d.es):[...editStu,d.es]}
+ else if(b.id==='sxapply'){sd.subs=parseSyl(document.querySelector('[data-sxe]').value,sd.subs);sd.stu=[...editStu];editTxt=false;mark();draw()}
+ else if(b.id==='sxcancel'){editTxt=false;draw()}
+ else if(d.sdel){if(pend==='syl'){S.syl=SY().filter(x=>x.id!==sylSel);pend=null;sylSel=null;sd=null;dirty=false;store()}else pend='syl';draw()}
+ else if(b.id==='ssv'){const i=SY().findIndex(x=>x.id===sd.id);if(i>=0)S.syl[i]=JSON.parse(JSON.stringify(sd));store();dirty=false;draw();const e=document.getElementById('sv');if(e){e.textContent='Save ho gaya';e.className='mu'}}
+ else if(d.ns){b.classList.toggle('on');if(!newStu)newStu=S.students.map(s=>s.id);newStu=newStu.includes(d.ns)?newStu.filter(x=>x!==d.ns):[...newStu,d.ns]}
+ else if(b.id==='snew'){const nm=document.querySelector('[data-sn]').value.trim(),subs=parseSyl(document.querySelector('[data-sx]').value),m=document.getElementById('smsg');if(!subs.length){m.textContent='Text khali hai ya sahi format me nahi hai. Subject ki line # se shuru honi chahiye.';return}SY().push({id:'y'+Date.now(),name:nm||'Syllabus',stu:newStu||S.students.map(s=>s.id),subs});newStu=null;store();draw()}
+ else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copy ho gaya'}catch(x){b.textContent='Copy nahi hua'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
  else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;store()}editId=null;draw()}
