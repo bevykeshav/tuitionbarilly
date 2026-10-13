@@ -104,7 +104,7 @@ function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<
 function imgH(kd,d){const u=PH[pkk(d,rs,kd)];return u?'<img src="'+u+'" style="width:100px;display:block;margin:4px 0;border:1px solid #444">':''}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
-function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
+function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';ttk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
 function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
@@ -121,11 +121,11 @@ function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][s
 function vEntry(){
  if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false}
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}</button>`).join('');
  const full=r.att!=='A';
- return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>
+ return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Kyu nahi kiya? (bacche ka karan)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
@@ -285,9 +285,27 @@ function wkAct(sub,t){
 }
 function addWk(l){const cur=(dr.work||'').trim();dr.work=cur?cur+'\n'+l:l;mark()}
 function addHw(l){const cur=(dr.hwtext||'').trim();dr.hwtext=cur?cur+'\n'+l:l;mark()}
+let ttSel=null,ttd={},ttk='';
+const todaySubs=(sid,d)=>((S.tt||{})[sid]||{})[DAYN[new Date(d+'T00:00:00').getDay()]]||[];
+function ttSubs(sid){const a=[];SY().filter(y=>(y.stu||[]).includes(sid)).forEach(y=>y.subs.forEach(sb=>{if(!a.includes(sb.n))a.push(sb.n)}));return a.length?a:SUB()}
+function ttBanner(){
+ const dn=DAYN[new Date(date+'T00:00:00').getDay()],t=todaySubs(sel,date),has=Object.values((S.tt||{})[sel]||{}).some(a=>a.length),who=date===iso(new Date())?'Aaj':fmt(date);
+ return `<p style="margin:8px 0">${who} <b>${dn}</b> hai${t.length?' | Time table: <b>'+esc(t.join(', '))+'</b>':(has?' | Is din koi subject nahi':'')}</p>`;
+}
+function ttCard(){
+ if(!S.students.length)return '';
+ if(!S.students.find(s=>s.id===ttSel))ttSel=S.students[0].id;
+ if(ttk!==ttSel){ttk=ttSel;ttd=JSON.parse(JSON.stringify((S.tt||{})[ttSel]||{}))}
+ const subs=ttSubs(ttSel);
+ const chips=S.students.map(s=>`<button class="chip ${s.id===ttSel?'on':''}" data-tts="${s.id}">${esc(s.name)}</button>`).join('');
+ const rows=DAYS.map(dn=>`<div style="margin:8px 0"><b>${dn}</b><div class="chips" style="flex-wrap:wrap">${subs.map(sb=>`<button class="chip ${(ttd[dn]||[]).includes(sb)?'on':''}" data-ttday="${dn}" data-ttsub="${esc(sb)}">${esc(sb)}</button>`).join('')}</div></div>`).join('');
+ return `<div class="c"><h2>Time table</h2><p class="mu">Bacha chuno aur har din ke subject tick karo. Jo din khali rahe wahan koi subject nahi.</p><div class="chips" style="flex-wrap:wrap">${chips}</div>${rows}<div class="seg" style="margin-top:8px"><button class="on" id="ttsave">Time table save karo</button><button id="ttall">Sab bacchon par lagao</button></div><p class="mu" id="ttmsg"></p></div>`;
+}
 function qhSubs(){
  const out=[];SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>y.subs.forEach((sb,si)=>out.push({k:y.id+'|'+si,n:sb.n,set:y.name,items:sb.items})));
- out.forEach(o=>{o.label=out.filter(x=>x.n===o.n).length>1?o.n+' ('+o.set+')':o.n});return out;
+ const tn=todaySubs(sel,date).map(x=>x.toLowerCase()),tg=date===iso(new Date())?' (aaj)':' (is din ka)';
+ out.forEach(o=>{o.today=tn.includes(o.n.toLowerCase());o.label=(out.filter(x=>x.n===o.n).length>1?o.n+' ('+o.set+')':o.n)+(o.today?tg:'')});
+ out.sort((a,b)=>(b.today?1:0)-(a.today?1:0));return out;
 }
 function quickHw(kind){
  const hw=kind!=='wk',p=hw?'q':'w',L=hw?QH:WH,GEN=hw?HWGEN:WKGEN,act=hw?hwAct:wkAct;
@@ -330,7 +348,8 @@ function vSyl(){
  <button class="pri" id="snew" style="margin-top:10px">Syllabus banao</button><p class="mu" id="smsg"></p></div>`;
 }
 
-const DAYN=['Raviwar','Somwar','Mangalwar','Budhwar','Guruwar','Shukrawar','Shaniwar'];
+const DAYN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 function grpHw(txt){
  const groups=[],other=[];
  String(txt||'').split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(l=>{
@@ -342,7 +361,9 @@ function grpHw(txt){
 }
 function hwMessage(st){
  const r=dr,pv=prevHw(sel,date),L=[];
- L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') ka Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date),'');
+ L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') ka Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
+ const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Aaj ka time table: '+tdy.join(', '));
+ L.push('');
  const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
  if(wl.length){L.push('\u2705 *Aaj tuition mein hua*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
  const g=grpHw(r.hwtext);
@@ -396,6 +417,7 @@ function vStu(){
  return `<div class="c"><h2>Settings</h2><label>Teacher ka naam</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook ke subject</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p><button class="pri" id="ss">Settings save karo</button></div>
  <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><label>Parent kaun sa WhatsApp use karta hai</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Jodo</button></div>
  <div class="c"><h2>Sab bacche</h2>${list}</div>
+ ${ttCard()}
  <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
@@ -451,6 +473,10 @@ document.addEventListener('click',async e=>{
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
+ else if(d.tts){if(!okLeave())return;ttSel=d.tts;ttk='';draw()}
+ else if(d.ttsub!==undefined){b.classList.toggle('on');const a=ttd[d.ttday]||(ttd[d.ttday]=[]),i=a.indexOf(d.ttsub);if(i>=0)a.splice(i,1);else a.push(d.ttsub);mark()}
+ else if(b.id==='ttsave'){S.tt=S.tt||{};S.tt[ttSel]=JSON.parse(JSON.stringify(ttd));store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Time table save ho gaya.'}
+ else if(b.id==='ttall'){if(!confirm('Sab bacchon ka time table isi jaisa ho jaayega. Pakka?'))return;S.tt=S.tt||{};S.students.forEach(x=>{S.tt[x.id]=JSON.parse(JSON.stringify(ttd))});store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Sab bacchon par lag gaya.'}
  else if(d.wo){wOpen=!wOpen;draw()}
  else if(d.ws){wSub=d.ws;draw()}
  else if(d.wh!==undefined){const l=WH[+d.wh];if(l){addWk(l);draw()}}
