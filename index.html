@@ -290,7 +290,7 @@ const todaySubs=(sid,d)=>((S.tt||{})[sid]||{})[DAYN[new Date(d+'T00:00:00').getD
 function ttSubs(sid){const a=[];SY().filter(y=>(y.stu||[]).includes(sid)).forEach(y=>y.subs.forEach(sb=>{if(!a.includes(sb.n))a.push(sb.n)}));return a.length?a:SUB()}
 function ttBanner(){
  const dn=DAYN[new Date(date+'T00:00:00').getDay()],t=todaySubs(sel,date),has=Object.values((S.tt||{})[sel]||{}).some(a=>a.length),who=date===iso(new Date())?'Aaj':fmt(date);
- return `<p style="margin:8px 0">${who} <b>${dn}</b> hai${t.length?' | Time table: <b>'+esc(t.join(', '))+'</b>':(has?' | Is din koi subject nahi':'')}</p>`;
+ return `<div class="row" style="margin:8px 0"><div>${who} <b>${dn}</b> hai${t.length?' | Time table: <b>'+esc(t.join(', '))+'</b>':(has?' | Is din koi subject nahi':' | Is bacche ka time table set nahi hai')}</div><button class="sm" data-gtt="1">Time table ${has?'badlo':'set karo'}</button></div>`;
 }
 function ttCard(){
  if(!S.students.length)return '';
@@ -299,7 +299,7 @@ function ttCard(){
  const subs=ttSubs(ttSel);
  const chips=S.students.map(s=>`<button class="chip ${s.id===ttSel?'on':''}" data-tts="${s.id}">${esc(s.name)}</button>`).join('');
  const rows=DAYS.map(dn=>`<div style="margin:8px 0"><b>${dn}</b><div class="chips" style="flex-wrap:wrap">${subs.map(sb=>`<button class="chip ${(ttd[dn]||[]).includes(sb)?'on':''}" data-ttday="${dn}" data-ttsub="${esc(sb)}">${esc(sb)}</button>`).join('')}</div></div>`).join('');
- return `<div class="c"><h2>Time table</h2><p class="mu">Bacha chuno aur har din ke subject tick karo. Jo din khali rahe wahan koi subject nahi.</p><div class="chips" style="flex-wrap:wrap">${chips}</div>${rows}<div class="seg" style="margin-top:8px"><button class="on" id="ttsave">Time table save karo</button><button id="ttall">Sab bacchon par lagao</button></div><p class="mu" id="ttmsg"></p></div>`;
+ return `<div class="c" id="ttcard"><h2>Time table</h2><p class="mu">Bacha chuno aur har din ke subject tick karo. Jo din khali rahe wahan koi subject nahi.</p><div class="chips" style="flex-wrap:wrap">${chips}</div>${rows}<div class="seg" style="margin-top:8px"><button class="on" id="ttsave">Time table save karo</button><button id="ttall">Sab bacchon par lagao</button></div><p class="mu" id="ttmsg"></p></div>`;
 }
 function qhSubs(){
  const out=[];SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>y.subs.forEach((sb,si)=>out.push({k:y.id+'|'+si,n:sb.n,set:y.name,items:sb.items})));
@@ -473,6 +473,7 @@ document.addEventListener('click',async e=>{
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
+ else if(d.gtt){if(!okLeave())return;tab='stu';ttSel=sel;ttk='';draw();const e=document.getElementById('ttcard');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth'})}
  else if(d.tts){if(!okLeave())return;ttSel=d.tts;ttk='';draw()}
  else if(d.ttsub!==undefined){b.classList.toggle('on');const a=ttd[d.ttday]||(ttd[d.ttday]=[]),i=a.indexOf(d.ttsub);if(i>=0)a.splice(i,1);else a.push(d.ttsub);mark()}
  else if(b.id==='ttsave'){S.tt=S.tt||{};S.tt[ttSel]=JSON.parse(JSON.stringify(ttd));store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Time table save ho gaya.'}
