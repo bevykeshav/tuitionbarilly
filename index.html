@@ -204,7 +204,42 @@ const sylTot=y=>{let d=0,t=0;y.subs.forEach(x=>x.items.forEach(i=>{t++;if(i.d)d+
 const stuNames=ids=>S.students.filter(s=>(ids||[]).includes(s.id)).map(s=>s.name).join(', ')||'Koi nahi';
 function stuChips(arr,attr){return S.students.map(s=>`<button class="chip ${arr.includes(s.id)?'on':''}" ${attr}="${s.id}">${esc(s.name)}</button>`).join('')}
 function sylInfo(sid){return SY().filter(x=>(x.stu||[]).includes(sid)).map(x=>{const [d,t]=sylTot(x);const per=[];x.subs.forEach(sb=>sb.items.forEach(i=>{if(i.d&&i.d>=from&&i.d<=to)per.push(sb.n+': '+i.t)}));return {n:x.name,d,t,per}}).filter(x=>x.t)}
-const SPROMPT="Is syllabus PDF ko plain text mein badlo. Har subject ka naam alag line par '# ' laga ke likho (jaise '# Math'). Uske neeche har chapter ya topic ek alag line par likho. Table, extra explanation ya heading mat dena, sirf yahi format. Example:\n# Math\nChapter 1: Numbers\nChapter 2: Addition\n\n# Hindi\nPaath 1: Kavita\nPaath 2: Kahani";
+const SPROMPT=`Main tumhe school ke syllabus ki PDF ya photo bhej raha hu. Isko plain text mein badlo, bilkul is format mein:
+
+# Subject ka naam
+Topic 1
+Topic 2
+
+# Agla subject
+Topic 1
+
+Niyam (inhe zaroor maanna):
+
+1. Har subject ka naam alag line par "# " laga ke likho, wahi naam jo table mein likha hai. Jaise Hindi Literature aur Hindi Grammar alag subject hain to alag "#" lagao.
+
+2. Har chapter, topic ya activity ek alag line par likho. Do ya teen chapter ek line mein mat milao. Table ke do column hon to dono column ke topic alag alag line mein likho.
+
+3. Jahan subject ke andar hisse hon (Reading, Literature, Grammar, Writing Skills, Workbook, Lab Activity, Map Work, Dictation, साहित्य, व्याकरण, अभ्यास पुस्तिका, श्रुतलेख, कविता पाठ), us hisse ka naam har line ke shuru mein colon ke saath likho. Jaise "Literature: Ch.8 Pooh Gets into a Tight Place" ya "साहित्य: पाठ-8 छुटकन ने नदी कैसे पार की". Isse ek hi naam ke do chapter alag pehchaane jaate hain.
+
+4. Agar ek hi cheez ke kai number ek saath likhe hain (jaise "Workbook: Ch.7, 8" ya "Pg. No. 71 to 97"), to unhe ek hi line mein rakho.
+
+5. Koi topic mat chhodna. Saare pages dekho. Syllabus mein jo bhi likha hai wo sab aana chahiye.
+
+6. Apni taraf se kuch mat jodo aur kuch mat sudharo. Spelling bilkul waisi rakho jaisi syllabus mein hai. Hindi aur Sanskrit Devanagari mein likho. Agar PDF ka text kharab ya code jaisa dikhe (jaise "iBu&ikBu"), to use mat padho. Page ko tasveer ki tarah dekh kar likho.
+
+7. School ka naam, address, session, class, S.N., aur exam ka naam (UT-2, Half Yearly) topic nahi hain. Inhe "#" ya topic mein mat likhna.
+
+8. Koi emoji, bullet (-, •), numbering, table ya extra heading mat lagao.
+
+9. Agar PDF mein kai classes hain, to har class ka text alag code block mein do aur har block ke upar class ka naam likho.
+
+10. Jo shabd dhundhla ho ya pakka na ho, use apne andaaz se mat bharo. Use text mein jaisa dikhe waisa likho aur neeche "Pakka nahi" mein bata do.
+
+Jawab sirf is tarah do:
+- Pehli line: app mein syllabus ka naam kya rakhein (jaise "Class 3 UT-2").
+- Phir poora text ek code block mein.
+- Code block ke baad sirf ek line: "Total: X subject, Y topic". Agar kuch pakka nahi tha to uske neeche "Pakka nahi:" likhkar list do.
+- Isse zyada kuch mat likhna.`;
 function vSyl(){
  if(sylSel&&sd){
   const [dn,tt]=sylTot(sd),pc=tt?Math.round(dn*100/tt):0;
@@ -223,7 +258,7 @@ function vSyl(){
  const list=SY().map(y=>{const [d,t]=sylTot(y),pc=t?Math.round(d*100/t):0;return `<div class="c"><h2>${esc(y.name)}</h2><p class="mu" style="margin:2px 0">Lagu: ${esc(stuNames(y.stu))}</p><b>Ho gaya ${d}/${t} (${pc}%)</b> <span class="mu">| Baaki ${t-d}</span><div class="bar2"><i style="width:${pc}%"></i></div><button class="pri" data-sopen="${y.id}">Kholo</button></div>`}).join('')||'<div class="c mu">Abhi koi syllabus nahi hai. Neeche naya jodo.</div>';
  const ns=newStu||S.students.map(s=>s.id);
  return `${list}<div class="c"><h2>Naya syllabus jodo</h2>
- <p class="mu">1. Syllabus PDF Claude ko do aur neeche wala prompt bhejo.<br>2. Claude ka text yahan paste karo.</p>
+ <p class="mu">1. Syllabus PDF Claude ko do aur neeche wala prompt bhejo.<br>2. Claude ka text (sirf code block wala) yahan paste karo.<br>3. Claude ki "Total" line apni PDF se mila lena.</p>
  <button id="sprompt" style="width:100%">Claude ke liye prompt copy karo</button>
  <label>Syllabus ka naam</label><input data-sn placeholder="jaise Class 3 Half Yearly">
  <label>Claude ka text yahan paste karo</label><textarea data-sx style="min-height:150px" placeholder="# Math&#10;Chapter 1: Numbers&#10;Chapter 2: Addition&#10;&#10;# Hindi&#10;Paath 1: Kavita"></textarea>
