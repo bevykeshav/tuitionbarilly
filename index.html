@@ -18,6 +18,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:0 12px 40px}
 .tabs{display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5}
 .tabs button{flex:1;font-size:14px;padding:10px 4px}
+.qb{display:block;width:100%;text-align:left;margin:4px 0;font-size:14px;min-height:40px;padding:8px 10px}
 .bar2{height:10px;border-radius:6px;background:var(--ln);overflow:hidden;margin:8px 0}.bar2>i{display:block;height:100%;background:var(--ac)}
 button,input,textarea{font:inherit;color:var(--tx)}
 button{border:1px solid var(--ln);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px}
@@ -129,7 +130,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Kyu nahi kiya? (bacche ka karan)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
- <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
+ <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Quick homework chhupao':'Quick homework (syllabus se)'}</button>${qOpen?quickHw():''}<button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
  <div class="fb">${photoUI('hw','Homework ki photo (notebook ya book)')}</div>
  ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>${photoUI('wk','Tuition par kya kiya ki photo')}</div>
  <div class="fb"><label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}</div>
@@ -240,6 +241,46 @@ Jawab sirf is tarah do:
 - Phir poora text ek code block mein.
 - Code block ke baad sirf ek line: "Total: X subject, Y topic". Agar kuch pakka nahi tha to uske neeche "Pakka nahi:" likhkar list do.
 - Isse zyada kuch mat likhna.`;
+
+let qOpen=false,qSub='',QH=[];
+const HWGEN=['Aaj jo padhaya wo yaad karke likho','Aaj ka kaam copy mein 2 baar likho','Workbook ke sawal karo','Spelling yaad karo (3-3 baar likho)','Tables yaad karo','Question-answer yaad karo'];
+function hwAct(sub,t){
+ const a=(sub+' '+t).toLowerCase();
+ if(/lab activity/.test(a))return 'copy mein likho ya draw karo';
+ if(/map work/.test(a))return 'map mein bharo';
+ if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'poora karke laao';
+ if(/dictation|श्रुतलेख/.test(a))return 'spelling yaad karo';
+ if(/unseen|seen passage|reading|पठन/.test(a))return '2 baar padho';
+ if(/tables|squares|cubes/.test(a))return 'yaad karo';
+ if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'likh ke laao';
+ if(/math/.test(sub.toLowerCase()))return '10 sawal copy mein karke laao';
+ if(/hindi|हिंदी|हिन्दी/.test(sub.toLowerCase()))return 'padho aur 5 mushkil shabd 3-3 baar likho';
+ if(/english/.test(sub.toLowerCase()))return '2 baar padho aur 5 difficult words 3 times likho';
+ if(/sanskrit|संस्कृत/.test(sub.toLowerCase()))return 'yaad karke likho';
+ if(/science|evs|social|sst/.test(sub.toLowerCase()))return 'padho aur question-answer yaad karo';
+ if(/computer/.test(sub.toLowerCase()))return 'padho aur copy mein likho';
+ if(/g\.?k|mental|current/.test(sub.toLowerCase()))return 'yaad karo';
+ return 'padho aur likho';
+}
+function addHw(l){const cur=(dr.hwtext||'').trim();dr.hwtext=cur?cur+'\n'+l:l;mark()}
+function qhSubs(){
+ const out=[];SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>y.subs.forEach((sb,si)=>out.push({k:y.id+'|'+si,n:sb.n,set:y.name,items:sb.items})));
+ out.forEach(o=>{o.label=out.filter(x=>x.n===o.n).length>1?o.n+' ('+o.set+')':o.n});return out;
+}
+function quickHw(){
+ QH=[];const subs=qhSubs();
+ const gen=`<p class="mu" style="margin:8px 0 2px">Aam homework (tap karke jodo)</p>${HWGEN.map((g,i)=>`<button class="qb" data-qg="${i}">${esc(g)}</button>`).join('')}`;
+ if(!subs.length)return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0">Is bacche ka syllabus nahi hai. Syllabus tab mein jodoge to uske topic yahan dikhenge.</p>${gen}</div>`;
+ if(!subs.find(x=>x.k===qSub))qSub=subs[0].k;
+ const cur=subs.find(x=>x.k===qSub),cut=iso(new Date(Date.now()-3*864e5));
+ const rec=[],pen=[],old=[];cur.items.forEach(it=>{(it.d?(it.d>=cut?rec:old):pen).push(it)});
+ const btn=(it,tag)=>{QH.push(cur.n+': '+it.t+' - '+hwAct(cur.n,it.t));return `<button class="qb" data-qh="${QH.length-1}">${esc(it.t)}${tag?` <span class="mu">${tag}</span>`:''}</button>`};
+ return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0 0 6px">Subject chuno, phir topic par tap karo. Homework upar jud jaayega.</p><div class="chips" style="flex-wrap:wrap">${subs.map(x=>`<button class="chip ${x.k===qSub?'on':''}" data-qs="${esc(x.k)}">${esc(x.label)}</button>`).join('')}</div>
+ ${rec.length?'<p class="mu" style="margin:8px 0 2px">Haal mein padhaye (pichle 3 din)</p>'+rec.map(i=>btn(i,'(padhaya)')).join(''):''}
+ ${pen.length?'<p class="mu" style="margin:8px 0 2px">Abhi baaki topic</p>'+pen.map(i=>btn(i,'')).join(''):''}
+ ${old.length?'<p class="mu" style="margin:8px 0 2px">Pehle ho chuke (revision ke liye)</p>'+old.map(i=>btn(i,'')).join(''):''}
+ ${gen}</div>`;
+}
 function vSyl(){
  if(sylSel&&sd){
   const [dn,tt]=sylTot(sd),pc=tt?Math.round(dn*100/tt):0;
@@ -359,6 +400,10 @@ document.addEventListener('click',async e=>{
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
+ else if(d.qo){qOpen=!qOpen;draw()}
+ else if(d.qs){qSub=d.qs;draw()}
+ else if(d.qh!==undefined){const l=QH[+d.qh];if(l){addHw(l);draw()}}
+ else if(d.qg!==undefined){addHw(HWGEN[+d.qg]);draw()}
  else if(d.sopen){if(!okLeave())return;const o=SY().find(x=>x.id===d.sopen);sylSel=o?o.id:null;sd=o?JSON.parse(JSON.stringify(o)):null;sylF='all';editTxt=false;pend=null;dirty=false;draw()}
  else if(d.sylback){if(!okLeave())return;sylSel=null;sd=null;editTxt=false;pend=null;draw()}
  else if(d.sf){sylF=d.sf;draw()}
