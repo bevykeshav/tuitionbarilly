@@ -167,13 +167,15 @@ function summaryText(){
  if(nb)neg.push('\u274C Notebook school me jama thi: '+nb+' baar');
  if(tn&&ta!==null&&ta<40)neg.push('\u274C Test average kam: '+ta+'%');
  if(bad)neg.push('\u274C Kamzor rating (Bad): '+bad+' baar');
- const L=['*'+st.name+' (Class '+st.cls+') ki Report*',fmt(from)+' se '+fmt(to),''];
- if(pos.length)L.push('*Achhi baatein*',...pos,'');
- L.push('*Dhyan dene wali baatein*');
+ const L=['\u{1F4CA} *'+st.name+' (Class '+st.cls+') ki Progress Report*','\u{1F5D3}\uFE0F '+fmt(from)+' se '+fmt(to),''];
+ if(pos.length)L.push('\u{1F31F} *Achhi baatein*',...pos,'');
+ L.push('\u26A0\uFE0F *Dhyan dene wali baatein*');
  if(neg.length)L.push(...neg);else L.push('Is period me koi dikkat nahi.');
  const sy=sylInfo(rs);
- if(sy.length){L.push('','*Syllabus*');sy.forEach(x=>{L.push(x.n+': '+x.d+'/'+x.t+' topic ho gaye ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' baaki');if(x.per.length)L.push('Is period me hue: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
- L.push('','Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
+ if(sy.length){L.push('','\u{1F4D8} *Syllabus*');sy.forEach(x=>{L.push(x.n+': '+x.d+'/'+x.t+' topic ho gaye ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' baaki');if(x.per.length)L.push('Is period me hue: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
+ const enc=neg.length?'\u{1F64F} Thoda dhyan dene se aur behtar hoga. Hum milkar koshish karte hain.':(pos.length?'\u{1F31F} Bahut badhiya pradarshan! Aise hi mehnat jaari rakhein.':'');
+ if(enc)L.push('',enc);
+ L.push('','\u{1F4CE} Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
 function waUrl(st,text){
@@ -327,6 +329,34 @@ function vSyl(){
  <label>Kin bacchon ke liye</label><div class="chips" style="flex-wrap:wrap">${stuChips(ns,'data-ns')}</div>
  <button class="pri" id="snew" style="margin-top:10px">Syllabus banao</button><p class="mu" id="smsg"></p></div>`;
 }
+
+const DAYN=['Raviwar','Somwar','Mangalwar','Budhwar','Guruwar','Shukrawar','Shaniwar'];
+function grpHw(txt){
+ const groups=[],other=[];
+ String(txt||'').split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(l=>{
+  const m=l.match(/^([^:]{1,40}):\s*(.+)$/);
+  if(m&&/\s-\s/.test(m[2])){let g=groups.find(x=>x.sub===m[1].trim());if(!g){g={sub:m[1].trim(),items:[]};groups.push(g)}g.items.push(m[2].trim())}
+  else other.push(l);
+ });
+ return {groups,other};
+}
+function hwMessage(st){
+ const r=dr,pv=prevHw(sel,date),L=[];
+ L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') ka Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date),'');
+ const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ if(wl.length){L.push('\u2705 *Aaj tuition mein hua*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
+ const g=grpHw(r.hwtext);
+ L.push('\u{1F4DD} *Aaj ka Homework*');
+ g.groups.forEach((x,gi)=>{if(gi)L.push('');L.push('\u{1F4D6} *'+x.sub+'*');x.items.forEach((t,i)=>L.push((i+1)+'. '+t))});
+ if(g.groups.length&&g.other.length)L.push('');
+ g.other.forEach((t,i)=>L.push((g.groups.length?'\u2022 ':(g.other.length>1?(i+1)+'. ':''))+t));
+ L.push('');
+ if(pv&&dhw)L.push(dhw==='Y'?'\u{1F31F} Pichla homework: poora karke laye, shabash!':'\u{1F4CC} Pichla homework: poora nahi hua'+((dhn||'').trim()?' ('+dhn.trim()+')':''),'');
+ SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topic complete ('+Math.round(d*100/t)+'%)')});
+ if(L[L.length-1]!=='')L.push('');
+ L.push('Bacche ko roz thoda revision karwaiye. Koi sawal ho to zaroor bataiye.','- '+S.teacher+' (Tuition Teacher)');
+ return L.join('\n');
+}
 function stats(sid){
  const rows=[],a=new Date(from+'T00:00:00');
  for(let i=0;i<62;i++){const d=iso(new Date(a.getTime()+i*864e5));if(d>to)break;const r=R(d,sid);if(r.att||r.work||r.note||r.hwtext||r.tsub||r.tmk)rows.push([d,r])}
@@ -417,7 +447,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='wa'){
   const st=S.students.find(s=>s.id===sel),r=dr;
   if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
-  const t='Namaste, '+st.name+' ka '+fmt(date)+' ka homework:\n'+r.hwtext.trim()+'\n\n- '+S.teacher+' (Tuition Teacher)';
+  const t=hwMessage(st);
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
