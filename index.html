@@ -100,7 +100,7 @@ let dr={},dk='',dhw,dhn='',dph={},dirty=false;
 const KP=['hw','wk','ts'];
 const pkk=(d,s,kd)=>kd==='hw'?d+'|'+s:d+'|'+s+'|'+kd;
 function phv(kd){return dph[kd]!==undefined?dph[kd]:PH[pkk(date,sel,kd)]}
-function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<img src="${u}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="${kd}">Photo hatao</button>`:''}<input type="file" data-pf="${kd}" accept="image/*">`}
+function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<img src="${u}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="${kd}">Photo hatao</button>`:''}<input type="file" data-pf="${kd}" accept="image/*" capture="environment">`}
 function imgH(kd,d){const u=PH[pkk(d,rs,kd)];return u?'<img src="'+u+'" style="width:100px;display:block;margin:4px 0;border:1px solid #444">':''}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
