@@ -130,9 +130,9 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Kyu nahi kiya? (bacche ka karan)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
- <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Quick homework chhupao':'Quick homework (syllabus se)'}</button>${qOpen?quickHw():''}<button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
+ <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Quick homework chhupao':'Quick homework (syllabus se)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button></div>
  <div class="fb">${photoUI('hw','Homework ki photo (notebook ya book)')}</div>
- ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea>${photoUI('wk','Tuition par kya kiya ki photo')}</div>
+ ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Quick list chhupao':'Quick (syllabus se)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Tuition par kya kiya ki photo')}</div>
  <div class="fb"><label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}</div>
  <div class="fb"><label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>${photoUI('ts','Test ya marks ki photo')}</div>
  <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
@@ -242,7 +242,7 @@ Jawab sirf is tarah do:
 - Code block ke baad sirf ek line: "Total: X subject, Y topic". Agar kuch pakka nahi tha to uske neeche "Pakka nahi:" likhkar list do.
 - Isse zyada kuch mat likhna.`;
 
-let qOpen=false,qSub='',QH=[];
+let qOpen=false,qSub='',QH=[],wOpen=false,wSub='',WH=[];
 const HWGEN=['Aaj jo padhaya wo yaad karke likho','Aaj ka kaam copy mein 2 baar likho','Workbook ke sawal karo','Spelling yaad karo (3-3 baar likho)','Tables yaad karo','Question-answer yaad karo'];
 function hwAct(sub,t){
  const a=(sub+' '+t).toLowerCase();
@@ -262,20 +262,41 @@ function hwAct(sub,t){
  if(/g\.?k|mental|current/.test(sub.toLowerCase()))return 'yaad karo';
  return 'padho aur likho';
 }
+const WKGEN=['Aaj ka kaam copy mein karaya','Workbook ke sawal karaye','Spelling likhwayi aur yaad karwayi','Tables yaad karwaye','Question-answer yaad karwaye','Revision karaya','Test ki taiyari karwayi'];
+function wkAct(sub,t){
+ const a=(sub+' '+t).toLowerCase(),sb=sub.toLowerCase();
+ if(/lab activity/.test(a))return 'activity karwayi';
+ if(/map work/.test(a))return 'map mein bharwaya';
+ if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'workbook ke sawal karwaye';
+ if(/dictation|श्रुतलेख/.test(a))return 'dictation li aur spelling yaad karwayi';
+ if(/unseen|seen passage|reading|पठन/.test(a))return 'padhwaya';
+ if(/tables|squares|cubes/.test(a))return 'yaad karwaye';
+ if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'likhna sikhaya aur likhwaya';
+ if(/math/.test(sb))return '5 sawal samjhaye aur karwaye';
+ if(/hindi|हिंदी|हिन्दी/.test(sb))return 'padhaya aur mushkil shabd likhwaye';
+ if(/english/.test(sb))return 'padhaya aur difficult words likhwaye';
+ if(/sanskrit|संस्कृत/.test(sb))return 'yaad karwaya aur likhwaya';
+ if(/science|evs|social|sst/.test(sb))return 'padhaya aur question-answer likhwaye';
+ if(/computer/.test(sb))return 'samjhaya aur copy mein likhwaya';
+ if(/g\.?k|mental|current/.test(sb))return 'padhaya aur yaad karwaya';
+ return 'padhaya aur likhwaya';
+}
+function addWk(l){const cur=(dr.work||'').trim();dr.work=cur?cur+'\n'+l:l;mark()}
 function addHw(l){const cur=(dr.hwtext||'').trim();dr.hwtext=cur?cur+'\n'+l:l;mark()}
 function qhSubs(){
  const out=[];SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>y.subs.forEach((sb,si)=>out.push({k:y.id+'|'+si,n:sb.n,set:y.name,items:sb.items})));
  out.forEach(o=>{o.label=out.filter(x=>x.n===o.n).length>1?o.n+' ('+o.set+')':o.n});return out;
 }
-function quickHw(){
- QH=[];const subs=qhSubs();
- const gen=`<p class="mu" style="margin:8px 0 2px">Aam homework (tap karke jodo)</p>${HWGEN.map((g,i)=>`<button class="qb" data-qg="${i}">${esc(g)}</button>`).join('')}`;
+function quickHw(kind){
+ const hw=kind!=='wk',p=hw?'q':'w',L=hw?QH:WH,GEN=hw?HWGEN:WKGEN,act=hw?hwAct:wkAct;
+ L.length=0;const subs=qhSubs();
+ const gen=`<p class="mu" style="margin:8px 0 2px">Aam ${hw?'homework':'kaam'} (tap karke jodo)</p>${GEN.map((g,i)=>`<button class="qb" data-${p}g="${i}">${esc(g)}</button>`).join('')}`;
  if(!subs.length)return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0">Is bacche ka syllabus nahi hai. Syllabus tab mein jodoge to uske topic yahan dikhenge.</p>${gen}</div>`;
- if(!subs.find(x=>x.k===qSub))qSub=subs[0].k;
- const cur=subs.find(x=>x.k===qSub),cut=iso(new Date(Date.now()-3*864e5));
+ let sk=hw?qSub:wSub;if(!subs.find(x=>x.k===sk))sk=subs[0].k;if(hw)qSub=sk;else wSub=sk;
+ const cur=subs.find(x=>x.k===sk),cut=iso(new Date(Date.now()-3*864e5));
  const rec=[],pen=[],old=[];cur.items.forEach(it=>{(it.d?(it.d>=cut?rec:old):pen).push(it)});
- const btn=(it,tag)=>{QH.push(cur.n+': '+it.t+' - '+hwAct(cur.n,it.t));return `<button class="qb" data-qh="${QH.length-1}">${esc(it.t)}${tag?` <span class="mu">${tag}</span>`:''}</button>`};
- return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0 0 6px">Subject chuno, phir topic par tap karo. Homework upar jud jaayega.</p><div class="chips" style="flex-wrap:wrap">${subs.map(x=>`<button class="chip ${x.k===qSub?'on':''}" data-qs="${esc(x.k)}">${esc(x.label)}</button>`).join('')}</div>
+ const btn=(it,tag)=>{L.push(cur.n+': '+it.t+' - '+act(cur.n,it.t));return `<button class="qb" data-${p}h="${L.length-1}">${esc(it.t)}${tag?` <span class="mu">${tag}</span>`:''}</button>`};
+ return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0 0 6px">Subject chuno, phir topic par tap karo. ${hw?'Homework':'Tuition par kya kiya'} upar jud jaayega.</p><div class="chips" style="flex-wrap:wrap">${subs.map(x=>`<button class="chip ${x.k===sk?'on':''}" data-${p}s="${esc(x.k)}">${esc(x.label)}</button>`).join('')}</div>
  ${rec.length?'<p class="mu" style="margin:8px 0 2px">Haal mein padhaye (pichle 3 din)</p>'+rec.map(i=>btn(i,'(padhaya)')).join(''):''}
  ${pen.length?'<p class="mu" style="margin:8px 0 2px">Abhi baaki topic</p>'+pen.map(i=>btn(i,'')).join(''):''}
  ${old.length?'<p class="mu" style="margin:8px 0 2px">Pehle ho chuke (revision ke liye)</p>'+old.map(i=>btn(i,'')).join(''):''}
@@ -400,6 +421,10 @@ document.addEventListener('click',async e=>{
   waOpen(st,t);
  }
  else if(b.id==='mk')mkpdf();
+ else if(d.wo){wOpen=!wOpen;draw()}
+ else if(d.ws){wSub=d.ws;draw()}
+ else if(d.wh!==undefined){const l=WH[+d.wh];if(l){addWk(l);draw()}}
+ else if(d.wg!==undefined){addWk(WKGEN[+d.wg]);draw()}
  else if(d.qo){qOpen=!qOpen;draw()}
  else if(d.qs){qSub=d.qs;draw()}
  else if(d.qh!==undefined){const l=QH[+d.qh];if(l){addHw(l);draw()}}
