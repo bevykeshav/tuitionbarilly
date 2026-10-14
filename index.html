@@ -153,29 +153,30 @@ function tCell(r){if(!r.tsub&&!r.tmk)return '-';const p=pct(r);const mk=r.tmk?(p
 function summaryText(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs),c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
+ const pl=(n,w)=>n+' '+w+(n===1?'':'s');
  const nb=rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0);
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
  const P=c('att','P'),A=c('att','A'),hy=c('hw','Y'),hn=c('hw','N'),bad=c('rt','Bad'),good=c('rt','Good')+c('rt','Better')+c('rt','Best');
  const pos=[],neg=[];
- if(P)pos.push('\u2705 Present: '+P+' din');
- if(hy)pos.push('\u2705 Homework karke laye: '+hy+' baar');
- if(tn&&(ta===null||ta>=40))pos.push('\u2705 Test: '+tn+' liye'+(ta===null?'':', average '+ta+'%'));
- if(good)pos.push('\u2705 Achhi rating (Good/Better/Best): '+good+' baar');
- if(A)neg.push('\u274C Absent: '+A+' din');
- if(hn){neg.push('\u274C Homework nahi laye: '+hn+' baar');
-  rows.filter(x=>x[1].hw==='N'&&x[1].hwnote).slice(0,3).forEach(x=>neg.push('     Karan ('+fmt(x[0]).slice(0,5)+'): '+String(x[1].hwnote).trim().slice(0,60)))}
- if(nb)neg.push('\u274C Notebook school me jama thi: '+nb+' baar');
- if(tn&&ta!==null&&ta<40)neg.push('\u274C Test average kam: '+ta+'%');
- if(bad)neg.push('\u274C Kamzor rating (Bad): '+bad+' baar');
- const L=['\u{1F4CA} *'+st.name+' (Class '+st.cls+') ki Progress Report*','\u{1F5D3}\uFE0F '+fmt(from)+' se '+fmt(to),''];
- if(pos.length)L.push('\u{1F31F} *Achhi baatein*',...pos,'');
- L.push('\u26A0\uFE0F *Dhyan dene wali baatein*');
- if(neg.length)L.push(...neg);else L.push('Is period me koi dikkat nahi.');
+ if(P)pos.push('\u2705 Attendance: present for '+pl(P,'day'));
+ if(hy)pos.push('\u2705 Homework completed: '+pl(hy,'time'));
+ if(tn&&(ta===null||ta>=40))pos.push('\u2705 Tests taken: '+tn+(ta===null?'':' (average score '+ta+'%)'));
+ if(good)pos.push('\u2705 Positive performance rating (Good/Better/Best): '+pl(good,'time'));
+ if(A)neg.push('\u{1F538} Absent: '+pl(A,'day'));
+ if(hn){neg.push('\u{1F538} Homework not completed: '+pl(hn,'time'));
+  rows.filter(x=>x[1].hw==='N'&&x[1].hwnote).slice(0,3).forEach(x=>neg.push('     Reason ('+fmt(x[0]).slice(0,5)+'): '+String(x[1].hwnote).trim().slice(0,60)))}
+ if(nb)neg.push('\u{1F538} Notebook found submitted at school: '+pl(nb,'time'));
+ if(tn&&ta!==null&&ta<40)neg.push('\u{1F538} Test average needs improvement: '+ta+'%');
+ if(bad)neg.push('\u{1F538} Below-expected performance rating: '+pl(bad,'time'));
+ const L=['\u{1F4CA} *Progress Report: '+st.name+' (Class '+st.cls+')*','\u{1F5D3}\uFE0F Period: '+fmt(from)+' to '+fmt(to),''];
+ if(pos.length)L.push('\u{1F31F} *Highlights*',...pos,'');
+ L.push('\u{1F4CC} *Areas for Attention*');
+ if(neg.length)L.push(...neg);else L.push('No concerns during this period.');
  const sy=sylInfo(rs);
- if(sy.length){L.push('','\u{1F4D8} *Syllabus*');sy.forEach(x=>{L.push(x.n+': '+x.d+'/'+x.t+' topic ho gaye ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' baaki');if(x.per.length)L.push('Is period me hue: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
- const enc=neg.length?'\u{1F64F} Thoda dhyan dene se aur behtar hoga. Hum milkar koshish karte hain.':(pos.length?'\u{1F31F} Bahut badhiya pradarshan! Aise hi mehnat jaari rakhein.':'');
+ if(sy.length){L.push('','\u{1F4D8} *Syllabus Progress*');sy.forEach(x=>{L.push(x.n+': '+x.d+' of '+x.t+' topics completed ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' remaining');if(x.per.length)L.push('Covered this period: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
+ const enc=neg.length?'\u{1F64F} With a little extra attention at home, we are confident '+st.name+' will improve further. We will continue to work on this together.':(pos.length?'\u{1F31F} Excellent performance. Please encourage '+st.name+' to keep up the great work.':'');
  if(enc)L.push('',enc);
- L.push('','\u{1F4CE} Poori detail ke liye PDF kholein.','- '+S.teacher+' (Tuition Teacher)');
+ L.push('','\u{1F4CE} The detailed report is attached as a PDF.','','Warm regards,','*'+S.teacher+'*','Tuition Teacher');
  return L.join('\n');
 }
 function waUrl(st,text){
