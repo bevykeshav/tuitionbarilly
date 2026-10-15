@@ -2,7 +2,7 @@
   "id": "tuition-app-2026",
   "name": "Tuition Report",
   "short_name": "Tuition",
-  "description": "Bacchon ki daily entry aur parents ke liye PDF report",
+  "description": "Daily student entries and PDF progress reports for parents",
   "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
