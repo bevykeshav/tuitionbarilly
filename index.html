@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tuition Report</title>
 <link rel="manifest" href="manifest.json">
@@ -53,8 +53,8 @@ textarea{min-height:72px}
 .rp th{background:#e8e8e8}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
 </style></head><body>
-<div class="tabs"><button data-tab="entry">Aaj ki entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Bacche</button></div>
-<div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">App install karo</button> <button class="sm" id="md"></button></span></div>
+<div class="tabs"><button data-tab="entry">Today's Entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Students</button></div>
+<div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
 <div id="pb"></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -70,23 +70,23 @@ let CU=DEF_URL;try{CU=localStorage.getItem('tms_url')||DEF_URL}catch(e){}
 let tmr=null,busy=false,again=false;
 function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
 async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
-function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: sync baaki hai...');tmr=setTimeout(doPush,2000)}
+function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: syncing...');tmr=setTimeout(doPush,2000)}
 async function doPush(){
  if(busy){again=true;return}busy=true;
- try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: save ho gaya':'Cloud: error aaya, dobara try hoga')}
- catch(e){sy('Cloud: net nahi hai, net aate hi sync hoga');again=true}
+ try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: saved':'Cloud: error, will retry')}
+ catch(e){sy('Cloud: offline, will sync when online');again=true}
  busy=false;if(again&&navigator.onLine){again=false;push()}
 }
 async function pull(){
- if(!CU)return;sy('Cloud se check ho raha hai...');
+ if(!CU)return;sy('Checking cloud...');
  try{
   const r=await call({a:'get'});
-  if(!r.ok){sy('Cloud: error, link check karo');return}
+  if(!r.ok){sy('Cloud: error, check the link');return}
   const rt=r.data?(r.data.ts||0):0;
-  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Cloud se data aa gaya')}
+  if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Data loaded from cloud')}
   else if((S.ts||0)>rt){await doPush()}
-  else sy('Cloud: sab up to date')
- }catch(e){sy('Cloud: net nahi hai')}
+  else sy('Cloud: everything is up to date')
+ }catch(e){sy('Cloud: offline')}
 }
 let ip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;const b=document.getElementById('ib');if(b)b.style.display=''});
@@ -103,7 +103,7 @@ let dr={},dk='',dhw,dhn='',dph={},dirty=false;
 const KP=['hw','wk','ts'];
 const pkk=(d,s,kd)=>kd==='hw'?d+'|'+s:d+'|'+s+'|'+kd;
 function phv(kd){return dph[kd]!==undefined?dph[kd]:PH[pkk(date,sel,kd)]}
-function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<img src="${u}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="${kd}">Photo hatao</button>`:''}<input type="file" data-pf="${kd}" accept="image/*" capture="environment">`}
+function photoUI(kd,label){const u=phv(kd);return `<label>${label}</label>${u?`<img src="${u}" style="max-width:160px;border-radius:8px;display:block;margin:6px 0"><button data-ph="${kd}">Remove photo</button>`:''}<input type="file" data-pf="${kd}" accept="image/*" capture="environment">`}
 function imgH(kd,d){const u=PH[pkk(d,rs,kd)];return u?'<img src="'+u+'" style="width:100px;display:block;margin:4px 0;border:1px solid #444">':''}
 const HRM=36e5;
 function pendList(){
@@ -115,20 +115,16 @@ const isPend=(d,sid)=>{const r=R(d,sid);return !!(r.hwat&&!r.hwsent&&(r.hwtext||
 function renderPB(){
  const e=document.getElementById('pb');if(!e)return;
  const a=pendList(),n=Date.now(),td=iso(new Date());
- e.innerHTML=a.length?`<div class="pbx"><b>Homework bhejna baaki (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">bhejne ka time ho gaya</span>':'<span class="mu">'+m+' min baad bhejna hai</span>'}</div><button class="sm" data-pb="${k}">Kholo</button><button class="sm" data-ps="${k}">Bhej diya</button></div>`}).join('')}</div>`:'';
+ e.innerHTML=a.length?`<div class="pbx"><b>Homework to send (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">time to send</span>':'<span class="mu">send in '+m+' min</span>'}</div><button class="sm" data-pb="${k}">Open</button><button class="sm" data-ps="${k}">Mark sent</button></div>`}).join('')}</div>`:'';
 }
-function calOpen(){
- const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4),end=base+9e5;
- const title='Homework bhejo: '+st.name,det=String(dr.hwtext||'').slice(0,500);
- const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
- const web='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&details='+encodeURIComponent(det)+'&dates='+z(base)+'/'+z(end);
- if(/Android/i.test(navigator.userAgent)){
-  location.href='intent://#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/event;S.title='+encodeURIComponent(title)+';S.description='+encodeURIComponent(det)+';l.beginTime='+base+';l.endTime='+end+';S.browser_fallback_url='+encodeURIComponent(web)+';end';
- }else window.open(web,'_blank');
+function alarmOpen(b){
+ const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4),d=new Date(base);
+ if(!/Android/i.test(navigator.userAgent)){b.textContent='Alarm works only on Android phones';return}
+ location.href='intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR='+d.getHours()+';i.android.intent.extra.alarm.MINUTES='+d.getMinutes()+';S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent('Send homework: '+st.name)+';end';
 }
-function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
+function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Not saved';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
-function okLeave(){if(!dirty)return true;if(confirm('Save nahi kiya hai. Bina save kiye chhod dein?')){dirty=false;dk='';ttk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
+function okLeave(){if(!dirty)return true;if(confirm('You have unsaved changes. Leave without saving?')){dirty=false;dk='';ttk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
 function doSave(){
  if((dr.hwtext||'').trim()){if(!dr.hwat)dr.hwat=Date.now()}else{delete dr.hwat;delete dr.hwsent}
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
@@ -136,7 +132,7 @@ function doSave(){
  store();
  for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd);PH[k]=dph[kd];pput(k,dph[kd])}}dph={};
  dirty=false;draw();
- const e=document.getElementById('sv');if(e){e.textContent='Save ho gaya';e.className='mu'}
+ const e=document.getElementById('sv');if(e){e.textContent='Saved';e.className='mu'}
 }
 let MODE='';try{MODE=localStorage.getItem('tms_mode')||''}catch(e){}
 if(!MODE)MODE=(screen.width>=900)?'desk':'phone';
@@ -144,7 +140,7 @@ function applyMode(){document.documentElement.classList.toggle('desk',MODE==='de
 function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
 function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
 function vEntry(){
- if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
+ if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
  if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
@@ -152,18 +148,18 @@ function vEntry(){
  const full=r.att!=='A';
  return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
- ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Pichle homework ki jaanch</b><p class="mu" style="margin:4px 0">${fmt(pv)} ko diya tha: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework karke laye?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Kyu nahi kiya? (bacche ka karan)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
+ ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
- <div class="fb"><label>Homework likho</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Quick homework chhupao':'Quick homework (syllabus se)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Homework WhatsApp par bhejo</button><button class="sm" id="cal" style="margin-top:8px;width:100%">1 ghante ka reminder lagao (Calendar)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework bhej diya (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Abhi bhejna baaki hai</p>`:'')}</div>
- <div class="fb">${photoUI('hw','Homework ki photo (notebook ya book)')}</div>
- ${full?`<div class="fb"><label>Tuition par kya kiya</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Quick list chhupao':'Quick (syllabus se)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Tuition par kya kiya ki photo')}</div>
- <div class="fb"><label>Notebook (kaun si school me jama hai)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','Paas me'],['S','School me']])}</div>`).join('')}</div>
- <div class="fb"><label>Test (agar liya)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks jaise 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>${photoUI('ts','Test ya marks ki photo')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Send Homework on WhatsApp</button><button class="sm" id="alm" style="margin-top:8px;width:100%">Set alarm for 1 hour (to send homework)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
+ ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
+ <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
+ <div class="fb"><label>Test (if taken)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks e.g. 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>${photoUI('ts','Test or marks photo')}</div>
  <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
  <div class="fb"><label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>
  </div></div>
- <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Save nahi hua':'Save ho chuka hai'}</span><button class="pri" id="svb">Save karo</button></div>`;
+ <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Not saved':'Saved'}</span><button class="pri" id="svb">Save</button></div>`;
 }
 let _db=null;
 function idb(){return _db||(_db=new Promise((ok,no)=>{try{const q=indexedDB.open('tms',1);q.onupgradeneeded=()=>q.result.createObjectStore('p');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}}))}
@@ -178,30 +174,30 @@ function tCell(r){if(!r.tsub&&!r.tmk)return '-';const p=pct(r);const mk=r.tmk?(p
 function summaryText(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs),c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
- const pl=(n,w)=>n+' '+w+(n===1?'':'s');
+ const pl=(n,a,b)=>n+' '+(n===1?a:b);
  const nb=rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0);
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
  const P=c('att','P'),A=c('att','A'),hy=c('hw','Y'),hn=c('hw','N'),bad=c('rt','Bad'),good=c('rt','Good')+c('rt','Better')+c('rt','Best');
  const pos=[],neg=[];
- if(P)pos.push('\u2705 Attendance: present for '+pl(P,'day'));
- if(hy)pos.push('\u2705 Homework completed: '+pl(hy,'time'));
- if(tn&&(ta===null||ta>=40))pos.push('\u2705 Tests taken: '+tn+(ta===null?'':' (average score '+ta+'%)'));
- if(good)pos.push('\u2705 Positive performance rating (Good/Better/Best): '+pl(good,'time'));
- if(A)neg.push('\u{1F538} Absent: '+pl(A,'day'));
- if(hn){neg.push('\u{1F538} Homework not completed: '+pl(hn,'time'));
+ if(P)pos.push('\u2705 Present: '+pl(P,'day','days'));
+ if(hy)pos.push('\u2705 Homework completed: '+pl(hy,'time','times'));
+ if(tn&&(ta===null||ta>=40))pos.push('\u2705 Tests: '+tn+' taken'+(ta===null?'':', average '+ta+'%'));
+ if(good)pos.push('\u2705 Good performance ratings (Good/Better/Best): '+pl(good,'time','times'));
+ if(A)neg.push('\u274C Absent: '+pl(A,'day','days'));
+ if(hn){neg.push('\u274C Homework not completed: '+pl(hn,'time','times'));
   rows.filter(x=>x[1].hw==='N'&&x[1].hwnote).slice(0,3).forEach(x=>neg.push('     Reason ('+fmt(x[0]).slice(0,5)+'): '+String(x[1].hwnote).trim().slice(0,60)))}
- if(nb)neg.push('\u{1F538} Notebook found submitted at school: '+pl(nb,'time'));
- if(tn&&ta!==null&&ta<40)neg.push('\u{1F538} Test average needs improvement: '+ta+'%');
- if(bad)neg.push('\u{1F538} Below-expected performance rating: '+pl(bad,'time'));
- const L=['\u{1F4CA} *Progress Report: '+st.name+' (Class '+st.cls+')*','\u{1F5D3}\uFE0F Period: '+fmt(from)+' to '+fmt(to),''];
+ if(nb)neg.push('\u274C Notebook was kept at school: '+pl(nb,'time','times'));
+ if(tn&&ta!==null&&ta<40)neg.push('\u274C Low test average: '+ta+'%');
+ if(bad)neg.push('\u274C Needs improvement (Bad rating): '+pl(bad,'time','times'));
+ const L=['\u{1F4CA} *'+st.name+' (Class '+st.cls+') - Progress Report*','\u{1F5D3}\uFE0F '+fmt(from)+' to '+fmt(to),''];
  if(pos.length)L.push('\u{1F31F} *Highlights*',...pos,'');
- L.push('\u{1F4CC} *Areas for Attention*');
+ L.push('\u26A0\uFE0F *Areas to Improve*');
  if(neg.length)L.push(...neg);else L.push('No concerns during this period.');
  const sy=sylInfo(rs);
- if(sy.length){L.push('','\u{1F4D8} *Syllabus Progress*');sy.forEach(x=>{L.push(x.n+': '+x.d+' of '+x.t+' topics completed ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' remaining');if(x.per.length)L.push('Covered this period: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
- const enc=neg.length?'\u{1F64F} With a little extra attention at home, we are confident '+st.name+' will improve further. We will continue to work on this together.':(pos.length?'\u{1F31F} Excellent performance. Please encourage '+st.name+' to keep up the great work.':'');
+ if(sy.length){L.push('','\u{1F4D8} *Syllabus*');sy.forEach(x=>{L.push(x.n+': '+x.d+'/'+x.t+' topics completed ('+Math.round(x.d*100/x.t)+'%), '+(x.t-x.d)+' remaining');if(x.per.length)L.push('Covered in this period: '+x.per.slice(0,5).join('; ')+(x.per.length>5?' ...':''))})}
+ const enc=neg.length?'\u{1F64F} With a little more attention, we can do even better. Let us work on it together.':(pos.length?'\u{1F31F} Excellent performance! Keep up the good work.':'');
  if(enc)L.push('',enc);
- L.push('','\u{1F4CE} The detailed report is attached as a PDF.','','Warm regards,','*'+S.teacher+'*','Tuition Teacher');
+ L.push('','\u{1F4CE} Please see the attached PDF for full details.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
 function waUrl(st,text){
@@ -230,84 +226,84 @@ function parseSyl(txt,old){
 }
 const toTxt=y=>y.subs.map(x=>'# '+x.n+'\n'+x.items.map(i=>i.t).join('\n')).join('\n\n');
 const sylTot=y=>{let d=0,t=0;y.subs.forEach(x=>x.items.forEach(i=>{t++;if(i.d)d++}));return [d,t]};
-const stuNames=ids=>S.students.filter(s=>(ids||[]).includes(s.id)).map(s=>s.name).join(', ')||'Koi nahi';
+const stuNames=ids=>S.students.filter(s=>(ids||[]).includes(s.id)).map(s=>s.name).join(', ')||'None';
 function stuChips(arr,attr){return S.students.map(s=>`<button class="chip ${arr.includes(s.id)?'on':''}" ${attr}="${s.id}">${esc(s.name)}</button>`).join('')}
 function sylInfo(sid){return SY().filter(x=>(x.stu||[]).includes(sid)).map(x=>{const [d,t]=sylTot(x);const per=[];x.subs.forEach(sb=>sb.items.forEach(i=>{if(i.d&&i.d>=from&&i.d<=to)per.push(sb.n+': '+i.t)}));return {n:x.name,d,t,per}}).filter(x=>x.t)}
-const SPROMPT=`Main tumhe school ke syllabus ki PDF ya photo bhej raha hu. Isko plain text mein badlo, bilkul is format mein:
+const SPROMPT=`I am sending you a school syllabus as a PDF or photo. Convert it to plain text in exactly this format:
 
-# Subject ka naam
+# Subject name
 Topic 1
 Topic 2
 
-# Agla subject
+# Next subject
 Topic 1
 
-Niyam (inhe zaroor maanna):
+Rules (follow all of them):
 
-1. Har subject ka naam alag line par "# " laga ke likho, wahi naam jo table mein likha hai. Jaise Hindi Literature aur Hindi Grammar alag subject hain to alag "#" lagao.
+1. Write each subject name on its own line starting with "# ", using the same name as in the table. For example, Hindi Literature and Hindi Grammar are separate subjects, so give each its own "#".
 
-2. Har chapter, topic ya activity ek alag line par likho. Do ya teen chapter ek line mein mat milao. Table ke do column hon to dono column ke topic alag alag line mein likho.
+2. Write every chapter, topic or activity on its own line. Never merge two or three chapters into one line. If the table has two columns, list the topics of both columns on separate lines.
 
-3. Jahan subject ke andar hisse hon (Reading, Literature, Grammar, Writing Skills, Workbook, Lab Activity, Map Work, Dictation, साहित्य, व्याकरण, अभ्यास पुस्तिका, श्रुतलेख, कविता पाठ), us hisse ka naam har line ke shuru mein colon ke saath likho. Jaise "Literature: Ch.8 Pooh Gets into a Tight Place" ya "साहित्य: पाठ-8 छुटकन ने नदी कैसे पार की". Isse ek hi naam ke do chapter alag pehchaane jaate hain.
+3. Where a subject has parts (Reading, Literature, Grammar, Writing Skills, Workbook, Lab Activity, Map Work, Dictation, साहित्य, व्याकरण, अभ्यास पुस्तिका, श्रुतलेख, कविता पाठ), start every line with the part name followed by a colon. For example "Literature: Ch.8 Pooh Gets into a Tight Place" or "साहित्य: पाठ-8 छुटकन ने नदी कैसे पार की". This keeps chapters with similar names apart.
 
-4. Agar ek hi cheez ke kai number ek saath likhe hain (jaise "Workbook: Ch.7, 8" ya "Pg. No. 71 to 97"), to unhe ek hi line mein rakho.
+4. If several numbers belong to the same item (for example "Workbook: Ch.7, 8" or "Pg. No. 71 to 97"), keep them on one line.
 
-5. Koi topic mat chhodna. Saare pages dekho. Syllabus mein jo bhi likha hai wo sab aana chahiye.
+5. Do not skip any topic. Check all pages. Everything written in the syllabus must appear.
 
-6. Apni taraf se kuch mat jodo aur kuch mat sudharo. Spelling bilkul waisi rakho jaisi syllabus mein hai. Hindi aur Sanskrit Devanagari mein likho. Agar PDF ka text kharab ya code jaisa dikhe (jaise "iBu&ikBu"), to use mat padho. Page ko tasveer ki tarah dekh kar likho.
+6. Do not add or correct anything. Keep the spelling exactly as in the syllabus. Write Hindi and Sanskrit in Devanagari. If the PDF text looks garbled or like code (for example "iBu&ikBu"), do not read it; read the page as an image instead.
 
-7. School ka naam, address, session, class, S.N., aur exam ka naam (UT-2, Half Yearly) topic nahi hain. Inhe "#" ya topic mein mat likhna.
+7. The school name, address, session, class, S.N. and the exam name (UT-2, Half Yearly) are not topics. Do not write them as "#" lines or as topics.
 
-8. Koi emoji, bullet (-, •), numbering, table ya extra heading mat lagao.
+8. Do not use emoji, bullets (-, •), numbering, tables or extra headings.
 
-9. Agar PDF mein kai classes hain, to har class ka text alag code block mein do aur har block ke upar class ka naam likho.
+9. If the PDF contains several classes, give each class its own code block with the class name above the block.
 
-10. Jo shabd dhundhla ho ya pakka na ho, use apne andaaz se mat bharo. Use text mein jaisa dikhe waisa likho aur neeche "Pakka nahi" mein bata do.
+10. If a word is blurred or you are not sure about it, do not guess. Write it as it appears and list it under "Not sure" below.
 
-Jawab sirf is tarah do:
-- Pehli line: app mein syllabus ka naam kya rakhein (jaise "Class 3 UT-2").
-- Phir poora text ek code block mein.
-- Code block ke baad sirf ek line: "Total: X subject, Y topic". Agar kuch pakka nahi tha to uske neeche "Pakka nahi:" likhkar list do.
-- Isse zyada kuch mat likhna.`;
+Reply only in this way:
+- First line: the name to use for the syllabus in the app (for example "Class 3 UT-2").
+- Then the full text in one code block.
+- After the code block, only one line: "Total: X subjects, Y topics". If anything was unclear, add "Not sure:" followed by the list.
+- Write nothing else.`;
 
 let qOpen=false,qSub='',QH=[],wOpen=false,wSub='',WH=[];
-const HWGEN=['Aaj jo padhaya wo yaad karke likho','Aaj ka kaam copy mein 2 baar likho','Workbook ke sawal karo','Spelling yaad karo (3-3 baar likho)','Tables yaad karo','Question-answer yaad karo'];
+const HWGEN=['Revise today\'s lesson and write it from memory','Write today\'s classwork twice in the notebook','Complete the workbook exercises','Practise the spellings (write each word 3 times)','Memorise the tables','Learn the question-answers'];
 function hwAct(sub,t){
- const a=(sub+' '+t).toLowerCase();
- if(/lab activity/.test(a))return 'copy mein likho ya draw karo';
- if(/map work/.test(a))return 'map mein bharo';
- if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'poora karke laao';
- if(/dictation|श्रुतलेख/.test(a))return 'spelling yaad karo';
- if(/unseen|seen passage|reading|पठन/.test(a))return '2 baar padho';
- if(/tables|squares|cubes/.test(a))return 'yaad karo';
- if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'likh ke laao';
- if(/math/.test(sub.toLowerCase()))return '10 sawal copy mein karke laao';
- if(/hindi|हिंदी|हिन्दी/.test(sub.toLowerCase()))return 'padho aur 5 mushkil shabd 3-3 baar likho';
- if(/english/.test(sub.toLowerCase()))return '2 baar padho aur 5 difficult words 3 times likho';
- if(/sanskrit|संस्कृत/.test(sub.toLowerCase()))return 'yaad karke likho';
- if(/science|evs|social|sst/.test(sub.toLowerCase()))return 'padho aur question-answer yaad karo';
- if(/computer/.test(sub.toLowerCase()))return 'padho aur copy mein likho';
- if(/g\.?k|mental|current/.test(sub.toLowerCase()))return 'yaad karo';
- return 'padho aur likho';
+ const a=(sub+' '+t).toLowerCase(),sb=sub.toLowerCase();
+ if(/lab activity/.test(a))return 'complete in the notebook (draw or write)';
+ if(/map work/.test(a))return 'fill in the map';
+ if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'complete the exercises';
+ if(/dictation|श्रुतलेख/.test(a))return 'practise the spellings';
+ if(/unseen|seen passage|reading|पठन/.test(a))return 'read twice';
+ if(/tables|squares|cubes/.test(a))return 'memorise';
+ if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'write in the notebook';
+ if(/math/.test(sb))return 'solve 10 questions in the notebook';
+ if(/hindi|हिंदी|हिन्दी/.test(sb))return 'read and write 5 difficult words, 3 times each';
+ if(/english/.test(sb))return 'read twice and write 5 difficult words, 3 times each';
+ if(/sanskrit|संस्कृत/.test(sb))return 'learn and write';
+ if(/science|evs|social|sst/.test(sb))return 'read and learn the question-answers';
+ if(/computer/.test(sb))return 'read and write notes in the notebook';
+ if(/g\.?k|mental|current/.test(sb))return 'learn';
+ return 'read and write';
 }
-const WKGEN=['Aaj ka kaam copy mein karaya','Workbook ke sawal karaye','Spelling likhwayi aur yaad karwayi','Tables yaad karwaye','Question-answer yaad karwaye','Revision karaya','Test ki taiyari karwayi'];
+const WKGEN=['Classwork completed in the notebook','Workbook exercises done','Spellings written and practised','Tables practised','Question-answers revised','Revision done','Test preparation done'];
 function wkAct(sub,t){
  const a=(sub+' '+t).toLowerCase(),sb=sub.toLowerCase();
- if(/lab activity/.test(a))return 'activity karwayi';
- if(/map work/.test(a))return 'map mein bharwaya';
- if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'workbook ke sawal karwaye';
- if(/dictation|श्रुतलेख/.test(a))return 'dictation li aur spelling yaad karwayi';
- if(/unseen|seen passage|reading|पठन/.test(a))return 'padhwaya';
- if(/tables|squares|cubes/.test(a))return 'yaad karwaye';
- if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'likhna sikhaya aur likhwaya';
- if(/math/.test(sb))return '5 sawal samjhaye aur karwaye';
- if(/hindi|हिंदी|हिन्दी/.test(sb))return 'padhaya aur mushkil shabd likhwaye';
- if(/english/.test(sb))return 'padhaya aur difficult words likhwaye';
- if(/sanskrit|संस्कृत/.test(sb))return 'yaad karwaya aur likhwaya';
- if(/science|evs|social|sst/.test(sb))return 'padhaya aur question-answer likhwaye';
- if(/computer/.test(sb))return 'samjhaya aur copy mein likhwaya';
- if(/g\.?k|mental|current/.test(sb))return 'padhaya aur yaad karwaya';
- return 'padhaya aur likhwaya';
+ if(/lab activity/.test(a))return 'activity conducted';
+ if(/map work/.test(a))return 'map work practised';
+ if(/workbook|worksheet|abhyas|अभ्यास/.test(a))return 'workbook exercises done';
+ if(/dictation|श्रुतलेख/.test(a))return 'dictation taken and spellings practised';
+ if(/unseen|seen passage|reading|पठन/.test(a))return 'reading practice done';
+ if(/tables|squares|cubes/.test(a))return 'practised';
+ if(/letter|essay|paragraph|writing|picture|पत्र|अनुच्छेद|रचनात्मक|संवाद|कहानी|story/.test(a))return 'writing taught and practised';
+ if(/math/.test(sb))return 'concept explained and 5 questions practised';
+ if(/hindi|हिंदी|हिन्दी/.test(sb))return 'lesson taught and difficult words practised';
+ if(/english/.test(sb))return 'lesson taught and difficult words practised';
+ if(/sanskrit|संस्कृत/.test(sb))return 'learning and writing practised';
+ if(/science|evs|social|sst/.test(sb))return 'lesson taught and question-answers written';
+ if(/computer/.test(sb))return 'explained and notes written';
+ if(/g\.?k|mental|current/.test(sb))return 'taught and revised';
+ return 'taught and practised';
 }
 function addWk(l){const cur=(dr.work||'').trim();dr.work=cur?cur+'\n'+l:l;mark()}
 function addHw(l){const cur=(dr.hwtext||'').trim();dr.hwtext=cur?cur+'\n'+l:l;mark()}
@@ -315,8 +311,8 @@ let ttSel=null,ttd={},ttk='';
 const todaySubs=(sid,d)=>((S.tt||{})[sid]||{})[DAYN[new Date(d+'T00:00:00').getDay()]]||[];
 function ttSubs(sid){const a=[];SY().filter(y=>(y.stu||[]).includes(sid)).forEach(y=>y.subs.forEach(sb=>{if(!a.includes(sb.n))a.push(sb.n)}));return a.length?a:SUB()}
 function ttBanner(){
- const dn=DAYN[new Date(date+'T00:00:00').getDay()],t=todaySubs(sel,date),has=Object.values((S.tt||{})[sel]||{}).some(a=>a.length),who=date===iso(new Date())?'Aaj':fmt(date);
- return `<div class="row" style="margin:8px 0"><div>${who} <b>${dn}</b> hai${t.length?' | Time table: <b>'+esc(t.join(', '))+'</b>':(has?' | Is din koi subject nahi':' | Is bacche ka time table set nahi hai')}</div><button class="sm" data-gtt="1">Time table ${has?'badlo':'set karo'}</button></div>`;
+ const dn=DAYN[new Date(date+'T00:00:00').getDay()],t=todaySubs(sel,date),has=Object.values((S.tt||{})[sel]||{}).some(a=>a.length),who=date===iso(new Date())?'Today':fmt(date);
+ return `<div class="row" style="margin:8px 0"><div>${who} is <b>${dn}</b>${t.length?' | Timetable: <b>'+esc(t.join(', '))+'</b>':(has?' | No subjects on this day':' | Timetable not set for this student')}</div><button class="sm" data-gtt="1">${has?'Edit':'Set'} timetable</button></div>`;
 }
 function ttCard(){
  if(!S.students.length)return '';
@@ -325,27 +321,27 @@ function ttCard(){
  const subs=ttSubs(ttSel);
  const chips=S.students.map(s=>`<button class="chip ${s.id===ttSel?'on':''}" data-tts="${s.id}">${esc(s.name)}</button>`).join('');
  const rows=DAYS.map(dn=>`<div style="margin:8px 0"><b>${dn}</b><div class="chips" style="flex-wrap:wrap">${subs.map(sb=>`<button class="chip ${(ttd[dn]||[]).includes(sb)?'on':''}" data-ttday="${dn}" data-ttsub="${esc(sb)}">${esc(sb)}</button>`).join('')}</div></div>`).join('');
- return `<div class="c" id="ttcard"><h2>Time table</h2><p class="mu">Bacha chuno aur har din ke subject tick karo. Jo din khali rahe wahan koi subject nahi.</p><div class="chips" style="flex-wrap:wrap">${chips}</div>${rows}<div class="seg" style="margin-top:8px"><button class="on" id="ttsave">Time table save karo</button><button id="ttall">Sab bacchon par lagao</button></div><p class="mu" id="ttmsg"></p></div>`;
+ return `<div class="c" id="ttcard"><h2>Timetable</h2><p class="mu">Choose a student and tick the subjects for each day. Days left empty have no subjects.</p><div class="chips" style="flex-wrap:wrap">${chips}</div>${rows}<div class="seg" style="margin-top:8px"><button class="on" id="ttsave">Save timetable</button><button id="ttall">Apply to all students</button></div><p class="mu" id="ttmsg"></p></div>`;
 }
 function qhSubs(){
  const out=[];SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>y.subs.forEach((sb,si)=>out.push({k:y.id+'|'+si,n:sb.n,set:y.name,items:sb.items})));
- const tn=todaySubs(sel,date).map(x=>x.toLowerCase()),tg=date===iso(new Date())?' (aaj)':' (is din ka)';
+ const tn=todaySubs(sel,date).map(x=>x.toLowerCase()),tg=date===iso(new Date())?' (today)':' (this day)';
  out.forEach(o=>{o.today=tn.includes(o.n.toLowerCase());o.label=(out.filter(x=>x.n===o.n).length>1?o.n+' ('+o.set+')':o.n)+(o.today?tg:'')});
  out.sort((a,b)=>(b.today?1:0)-(a.today?1:0));return out;
 }
 function quickHw(kind){
  const hw=kind!=='wk',p=hw?'q':'w',L=hw?QH:WH,GEN=hw?HWGEN:WKGEN,act=hw?hwAct:wkAct;
  L.length=0;const subs=qhSubs();
- const gen=`<p class="mu" style="margin:8px 0 2px">Aam ${hw?'homework':'kaam'} (tap karke jodo)</p>${GEN.map((g,i)=>`<button class="qb" data-${p}g="${i}">${esc(g)}</button>`).join('')}`;
- if(!subs.length)return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0">Is bacche ka syllabus nahi hai. Syllabus tab mein jodoge to uske topic yahan dikhenge.</p>${gen}</div>`;
+ const gen=`<p class="mu" style="margin:8px 0 2px">Common ${hw?'homework':'classwork'} (tap to add)</p>${GEN.map((g,i)=>`<button class="qb" data-${p}g="${i}">${esc(g)}</button>`).join('')}`;
+ if(!subs.length)return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0">This student has no syllabus. Add one in the Syllabus tab to see topics here.</p>${gen}</div>`;
  let sk=hw?qSub:wSub;if(!subs.find(x=>x.k===sk))sk=subs[0].k;if(hw)qSub=sk;else wSub=sk;
  const cur=subs.find(x=>x.k===sk),cut=iso(new Date(Date.now()-3*864e5));
  const rec=[],pen=[],old=[];cur.items.forEach(it=>{(it.d?(it.d>=cut?rec:old):pen).push(it)});
  const btn=(it,tag)=>{L.push(cur.n+': '+it.t+' - '+act(cur.n,it.t));return `<button class="qb" data-${p}h="${L.length-1}">${esc(it.t)}${tag?` <span class="mu">${tag}</span>`:''}</button>`};
- return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0 0 6px">Subject chuno, phir topic par tap karo. ${hw?'Homework':'Tuition par kya kiya'} upar jud jaayega.</p><div class="chips" style="flex-wrap:wrap">${subs.map(x=>`<button class="chip ${x.k===sk?'on':''}" data-${p}s="${esc(x.k)}">${esc(x.label)}</button>`).join('')}</div>
- ${rec.length?'<p class="mu" style="margin:8px 0 2px">Haal mein padhaye (pichle 3 din)</p>'+rec.map(i=>btn(i,'(padhaya)')).join(''):''}
- ${pen.length?'<p class="mu" style="margin:8px 0 2px">Abhi baaki topic</p>'+pen.map(i=>btn(i,'')).join(''):''}
- ${old.length?'<p class="mu" style="margin:8px 0 2px">Pehle ho chuke (revision ke liye)</p>'+old.map(i=>btn(i,'')).join(''):''}
+ return `<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><p class="mu" style="margin:0 0 6px">Choose a subject, then tap a topic. It will be added to ${hw?'Homework':'Covered in class'} above.</p><div class="chips" style="flex-wrap:wrap">${subs.map(x=>`<button class="chip ${x.k===sk?'on':''}" data-${p}s="${esc(x.k)}">${esc(x.label)}</button>`).join('')}</div>
+ ${rec.length?'<p class="mu" style="margin:8px 0 2px">Recently covered (last 3 days)</p>'+rec.map(i=>btn(i,'(covered)')).join(''):''}
+ ${pen.length?'<p class="mu" style="margin:8px 0 2px">Pending topics</p>'+pen.map(i=>btn(i,'')).join(''):''}
+ ${old.length?'<p class="mu" style="margin:8px 0 2px">Already done (for revision)</p>'+old.map(i=>btn(i,'')).join(''):''}
  ${gen}</div>`;
 }
 function vSyl(){
@@ -354,24 +350,24 @@ function vSyl(){
   const subs=sd.subs.map((sb,si)=>{
    const its=sb.items.map((it,ii)=>({it,ii})).filter(x=>sylF==='all'||!x.it.d);if(!its.length)return '';
    const sdn=sb.items.filter(i=>i.d).length;
-   return `<div class="c"><h2>${esc(sb.n)} <span class="mu">${sdn}/${sb.items.length} ho gaya</span></h2>${its.map(({it,ii})=>`<div class="row"><div style="${it.d?'text-decoration:line-through;opacity:.6':''}">${esc(it.t)}${it.d?` <span class="mu">(${fmt(it.d)})</span>`:''}</div><button class="${it.d?'on':''}" data-ti="${si}.${ii}" style="min-width:84px">${it.d?'Ho gaya':'Baaki'}</button></div>`).join('')}</div>`}).join('');
-  const ed=editTxt?`<div class="c"><h2>Text badlo</h2><p class="mu">Jo topic pehle ho chuke hain wo wahi rahenge agar naam same ho.</p><textarea data-sxe style="min-height:160px">${esc(toTxt(sd))}</textarea><label>Kin bacchon ke liye</label><div class="chips" style="flex-wrap:wrap">${stuChips(editStu,'data-es')}</div><div class="seg" style="margin-top:10px"><button class="on" id="sxapply">Badlo</button><button id="sxcancel">Cancel</button></div></div>`:'';
-  return `<div class="c"><div class="row"><div><h2 style="margin:0">${esc(sd.name)}</h2></div><button data-sylback="1">Wapas</button></div>
-  <p class="mu">Lagu: ${esc(stuNames(sd.stu))}</p><b>Ho gaya ${dn}/${tt} (${pc}%)</b> <span class="mu">| Baaki ${tt-dn}</span><div class="bar2"><i style="width:${pc}%"></i></div>
-  <div class="seg"><button class="${sylF==='all'?'on':''}" data-sf="all">Sab topic</button><button class="${sylF==='pend'?'on':''}" data-sf="pend">Sirf baaki</button></div>
-  <div class="seg" style="margin-top:8px"><button data-sedit="1">Text / bacche badlo</button><button data-sdel="1">${pend==='syl'?'Pakka hatao?':'Syllabus hatao'}</button></div></div>
-  ${ed}${subs||'<div class="c">Sab topic ho gaye.</div>'}
-  <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Save nahi hua':'Save ho chuka hai'}</span><button class="pri" id="ssv">Save karo</button></div>`;
+   return `<div class="c"><h2>${esc(sb.n)} <span class="mu">${sdn}/${sb.items.length} done</span></h2>${its.map(({it,ii})=>`<div class="row"><div style="${it.d?'text-decoration:line-through;opacity:.6':''}">${esc(it.t)}${it.d?` <span class="mu">(${fmt(it.d)})</span>`:''}</div><button class="${it.d?'on':''}" data-ti="${si}.${ii}" style="min-width:84px">${it.d?'Done':'Pending'}</button></div>`).join('')}</div>`}).join('');
+  const ed=editTxt?`<div class="c"><h2>Edit text</h2><p class="mu">Topics already marked done stay done if their name is unchanged.</p><textarea data-sxe style="min-height:160px">${esc(toTxt(sd))}</textarea><label>Applies to</label><div class="chips" style="flex-wrap:wrap">${stuChips(editStu,'data-es')}</div><div class="seg" style="margin-top:10px"><button class="on" id="sxapply">Apply</button><button id="sxcancel">Cancel</button></div></div>`:'';
+  return `<div class="c"><div class="row"><div><h2 style="margin:0">${esc(sd.name)}</h2></div><button data-sylback="1">Back</button></div>
+  <p class="mu">Applies to: ${esc(stuNames(sd.stu))}</p><b>Done ${dn}/${tt} (${pc}%)</b> <span class="mu">| Pending ${tt-dn}</span><div class="bar2"><i style="width:${pc}%"></i></div>
+  <div class="seg"><button class="${sylF==='all'?'on':''}" data-sf="all">All topics</button><button class="${sylF==='pend'?'on':''}" data-sf="pend">Pending only</button></div>
+  <div class="seg" style="margin-top:8px"><button data-sedit="1">Edit text / students</button><button data-sdel="1">${pend==='syl'?'Confirm delete?':'Delete syllabus'}</button></div></div>
+  ${ed}${subs||'<div class="c">All topics are done.</div>'}
+  <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Not saved':'Saved'}</span><button class="pri" id="ssv">Save</button></div>`;
  }
- const list=SY().map(y=>{const [d,t]=sylTot(y),pc=t?Math.round(d*100/t):0;return `<div class="c"><h2>${esc(y.name)}</h2><p class="mu" style="margin:2px 0">Lagu: ${esc(stuNames(y.stu))}</p><b>Ho gaya ${d}/${t} (${pc}%)</b> <span class="mu">| Baaki ${t-d}</span><div class="bar2"><i style="width:${pc}%"></i></div><button class="pri" data-sopen="${y.id}">Kholo</button></div>`}).join('')||'<div class="c mu">Abhi koi syllabus nahi hai. Neeche naya jodo.</div>';
+ const list=SY().map(y=>{const [d,t]=sylTot(y),pc=t?Math.round(d*100/t):0;return `<div class="c"><h2>${esc(y.name)}</h2><p class="mu" style="margin:2px 0">Applies to: ${esc(stuNames(y.stu))}</p><b>Done ${d}/${t} (${pc}%)</b> <span class="mu">| Pending ${t-d}</span><div class="bar2"><i style="width:${pc}%"></i></div><button class="pri" data-sopen="${y.id}">Open</button></div>`}).join('')||'<div class="c mu">No syllabus yet. Add one below.</div>';
  const ns=newStu||S.students.map(s=>s.id);
- return `${list}<div class="c"><h2>Naya syllabus jodo</h2>
- <p class="mu">1. Syllabus PDF Claude ko do aur neeche wala prompt bhejo.<br>2. Claude ka text (sirf code block wala) yahan paste karo.<br>3. Claude ki "Total" line apni PDF se mila lena.</p>
- <button id="sprompt" style="width:100%">Claude ke liye prompt copy karo</button>
- <label>Syllabus ka naam</label><input data-sn placeholder="jaise Class 3 Half Yearly">
- <label>Claude ka text yahan paste karo</label><textarea data-sx style="min-height:150px" placeholder="# Math&#10;Chapter 1: Numbers&#10;Chapter 2: Addition&#10;&#10;# Hindi&#10;Paath 1: Kavita"></textarea>
- <label>Kin bacchon ke liye</label><div class="chips" style="flex-wrap:wrap">${stuChips(ns,'data-ns')}</div>
- <button class="pri" id="snew" style="margin-top:10px">Syllabus banao</button><p class="mu" id="smsg"></p></div>`;
+ return `${list}<div class="c"><h2>Add New Syllabus</h2>
+ <p class="mu">1. Give the syllabus PDF to Claude and send the prompt below.<br>2. Paste Claude's text (the code block only) here.<br>3. Check Claude's "Total" line against your PDF.</p>
+ <button id="sprompt" style="width:100%">Copy prompt for Claude</button>
+ <label>Syllabus name</label><input data-sn placeholder="e.g. Class 3 Half Yearly">
+ <label>Paste Claude's text here</label><textarea data-sx style="min-height:150px" placeholder="# Math&#10;Chapter 1: Numbers&#10;Chapter 2: Addition&#10;&#10;# Hindi&#10;Paath 1: Kavita"></textarea>
+ <label>Applies to</label><div class="chips" style="flex-wrap:wrap">${stuChips(ns,'data-ns')}</div>
+ <button class="pri" id="snew" style="margin-top:10px">Create Syllabus</button><p class="mu" id="smsg"></p></div>`;
 }
 
 const DAYN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -387,21 +383,21 @@ function grpHw(txt){
 }
 function hwMessage(st){
  const r=dr,pv=prevHw(sel,date),L=[];
- L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') ka Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
- const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Aaj ka time table: '+tdy.join(', '));
+ L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') - Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
+ const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Today\'s timetable: '+tdy.join(', '));
  L.push('');
  const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
- if(wl.length){L.push('\u2705 *Aaj tuition mein hua*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
+ if(wl.length){L.push('\u2705 *Covered in today\'s class*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
  const g=grpHw(r.hwtext);
- L.push('\u{1F4DD} *Aaj ka Homework*');
+ L.push('\u{1F4DD} *Today\'s Homework*');
  g.groups.forEach((x,gi)=>{if(gi)L.push('');L.push('\u{1F4D6} *'+x.sub+'*');x.items.forEach((t,i)=>L.push((i+1)+'. '+t))});
  if(g.groups.length&&g.other.length)L.push('');
  g.other.forEach((t,i)=>L.push((g.groups.length?'\u2022 ':(g.other.length>1?(i+1)+'. ':''))+t));
  L.push('');
- if(pv&&dhw)L.push(dhw==='Y'?'\u{1F31F} Pichla homework: poora karke laye, shabash!':'\u{1F4CC} Pichla homework: poora nahi hua'+((dhn||'').trim()?' ('+dhn.trim()+')':''),'');
- SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topic complete ('+Math.round(d*100/t)+'%)')});
+ if(pv&&dhw)L.push(dhw==='Y'?'\u{1F31F} Previous homework: completed. Well done!':'\u{1F4CC} Previous homework: not completed'+((dhn||'').trim()?' (Reason: '+dhn.trim()+')':''),'');
+ SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topics completed ('+Math.round(d*100/t)+'%)')});
  if(L[L.length-1]!=='')L.push('');
- L.push('Bacche ko roz thoda revision karwaiye. Koi sawal ho to zaroor bataiye.','- '+S.teacher+' (Tuition Teacher)');
+ L.push('Kindly ensure the homework is completed before the next class and encourage a little revision every day. Please feel free to reach out with any questions.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
 function stats(sid){
@@ -410,42 +406,42 @@ function stats(sid){
  return rows;
 }
 const col=(t,ok)=>t?`<span class="${ok?'g':'r'}">${t}</span>`:'-';
-function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'<span class="r">School me: '+a.map(esc).join(', ')+'</span>':'')+(a.length&&b.length?'<br>':'')+(b.length?'<span class="g">Paas me: '+b.map(esc).join(', ')+'</span>':'')||'-'}
+function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'<span class="r">At school: '+a.map(esc).join(', ')+'</span>':'')+(a.length&&b.length?'<br>':'')+(b.length?'<span class="g">With child: '+b.map(esc).join(', ')+'</span>':'')||'-'}
 function build(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs);
- const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'Bacche ke paas',S:'School me jama'};
+ const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'With child',S:'At school'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework karke laye: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Check baaki':'-')}${r.hwnote?'<br>Karan: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">Is period me koi entry nahi.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework completed: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Not checked yet':'-')}${r.hwnote?'<br>Reason: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="8">No entries in this period.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
- <p><b>Period:</b> ${fmt(from)} se ${fmt(to)}</p>
- <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Tuition par kya kiya</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
- <p><b>Summary:</b> <span class="g">Present ${c('att','P')} din</span>, <span class="r">Absent ${c('att','A')} din</span>. Homework karke laye: <span class="g">${c('hw','Y')} baar Yes</span>, <span class="r">${c('hw','N')} baar No</span>. Notebook school me jama (subject ginke): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)} baar</span>.</p>
- ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topic ho gaye (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} baaki.${x.per.length?'<br>Is period me hue: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
- <p>Test liye: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
+ <p><b>Period:</b> ${fmt(from)} to ${fmt(to)}</p>
+ <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Covered in Class</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
+ <p><b>Summary:</b> <span class="g">Present: ${c('att','P')} days</span>, <span class="r">Absent: ${c('att','A')} days</span>. Homework completed: <span class="g">${c('hw','Y')} Yes</span>, <span class="r">${c('hw','N')} No</span>. Notebook kept at school (subject-wise count): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)}</span>.</p>
+ ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topics completed (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} remaining.${x.per.length?'<br>Covered in this period: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
+ <p>Tests taken: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
  <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
 }
 function vRep(){
- if(!S.students.length)return '<div class="c">Pehle "Bacche" tab me bacchon ke naam jodo.</div>';
+ if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===rs))rs=S.students[0].id;
  const chips=S.students.map(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`).join('');
- return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Pichle 7 din</button><button data-q="m">Is mahine</button></div>
- <div class="row"><div><label>Se</label><input type="date" id="fr" value="${from}"></div><div><label>Tak</label><input type="date" id="to" value="${to}"></div></div>
- <button class="pri" id="mk">PDF banao aur bhejo</button><p class="mu" id="ms">${esc(msg)}</p>
- <label>PDF ke saath ye summary message bhi jayega</label><div class="mu" style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:10px">${esc(summaryText())}</div>
- <div class="seg" style="margin-top:8px"><button id="sw">Sirf summary WhatsApp par</button><button id="sc">Summary copy karo</button></div></div>
+ return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Last 7 days</button><button data-q="m">This month</button></div>
+ <div class="row"><div><label>From</label><input type="date" id="fr" value="${from}"></div><div><label>To</label><input type="date" id="to" value="${to}"></div></div>
+ <button class="pri" id="mk">Create PDF and Share</button><p class="mu" id="ms">${esc(msg)}</p>
+ <label>This summary message will be sent with the PDF</label><div class="mu" style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:10px">${esc(summaryText())}</div>
+ <div class="seg" style="margin-top:8px"><button id="sw">Send Summary on WhatsApp</button><button id="sc">Copy Summary</button></div></div>
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Naam" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent ka WhatsApp number"></div><label>Parent kaun sa WhatsApp use karta hai</label>${wtSeg(editWt,'e')}<div class="seg" style="margin-top:10px"><button class="on" id="esave">Save karo</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}</span></div><button data-edit="${s.id}">Badlo</button><button data-del="${s.id}">${pend===s.id?'Pakka hatao?':'Hatao'}</button></div>`).join('')||'<p class="mu">Abhi koi bacha nahi.</p>';
- return `<div class="c"><h2>Settings</h2><label>Teacher ka naam</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook ke subject</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Comma laga ke likho, jaise SST, Math, Science</p><button class="pri" id="ss">Settings save karo</button></div>
- <div class="c"><h2>Bacha jodo</h2><div class="row"><input id="nn" placeholder="Naam"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent ka WhatsApp number (zaruri nahi)" style="margin-bottom:8px"><label>Parent kaun sa WhatsApp use karta hai</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Jodo</button></div>
- <div class="c"><h2>Sab bacche</h2>${list}</div>
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
+ return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><button class="pri" id="ss">Save Settings</button></div>
+ <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Add</button></div>
+ <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
- <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script ka web app link"><p class="mu">Doosre phone par pehle khali app me link daalo, tab purana data aa jayega.</p><button class="pri" id="cu">Abhi sync karo</button></div>
- <div class="c"><h2>Backup</h2><p class="mu">Data isi phone ke browser me rehta hai. Phone badalne se pehle backup le lo.</p><button id="bk">Backup save karo</button><label>Backup wapas lao</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button></div>
+ <div class="c"><h2>Backup</h2><p class="mu">Data is stored in this device's browser. Take a backup before changing devices.</p><button id="bk">Save Backup</button><label>Restore Backup</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
@@ -462,7 +458,7 @@ function dlFile(name,blob){
 }
 async function mkpdf(){
  const ms=document.getElementById('ms'),el=document.getElementById('rp');
- ms.textContent='PDF ban rahi hai...';
+ ms.textContent='Creating PDF...';
  try{
   const cv=await html2canvas(el,{scale:2,backgroundColor:'#ffffff'});
   const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'pt',format:'a4'});
@@ -472,14 +468,14 @@ async function mkpdf(){
    const x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,t.width,h);x.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
    if(p)pdf.addPage();pdf.addImage(t.toDataURL('image/jpeg',0.92),'JPEG',m,m,w,h*k);
   }
-  const nm=S.students.find(s=>s.id===rs).name.replace(/[^A-Za-z0-9]+/g,'_')||'bacha';
+  const nm=S.students.find(s=>s.id===rs).name.replace(/[^A-Za-z0-9]+/g,'_')||'student';
   const fn='Report_'+nm+'_'+from+'_to_'+to+'.pdf',blob=pdf.output('blob');
   const f=new File([blob],fn,{type:'application/pdf'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){
-   try{await navigator.share({files:[f],title:fn,text:summaryText()});ms.textContent='PDF share ho gayi.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancel hua.';return}}
+   try{await navigator.share({files:[f],title:fn,text:summaryText()});ms.textContent='PDF shared.';return}catch(x){if(x&&x.name==='AbortError'){ms.textContent='Share cancelled.';return}}
   }
-  dlFile(fn,blob);ms.textContent='PDF download ho gayi.';
- }catch(e){ms.textContent='PDF nahi ban payi, dobara try karo.'}
+  dlFile(fn,blob);ms.textContent='PDF downloaded.';
+ }catch(e){ms.textContent='Could not create the PDF. Please try again.'}
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
@@ -495,20 +491,20 @@ document.addEventListener('click',async e=>{
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt});store();draw()}}
  else if(b.id==='wa'){
   const st=S.students.find(s=>s.id===sel),r=dr;
-  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Pehle homework likho';return}
+  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Write the homework first';return}
   const t=hwMessage(st);
   dr.hwsent=Date.now();doSave();
   waOpen(st,t);
  }
- else if(b.id==='cal'){calOpen()}
+ else if(b.id==='alm'){alarmOpen(b)}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(b.id==='mk')mkpdf();
  else if(d.gtt){if(!okLeave())return;tab='stu';ttSel=sel;ttk='';draw();const e=document.getElementById('ttcard');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth'})}
  else if(d.tts){if(!okLeave())return;ttSel=d.tts;ttk='';draw()}
  else if(d.ttsub!==undefined){b.classList.toggle('on');const a=ttd[d.ttday]||(ttd[d.ttday]=[]),i=a.indexOf(d.ttsub);if(i>=0)a.splice(i,1);else a.push(d.ttsub);mark()}
- else if(b.id==='ttsave'){S.tt=S.tt||{};S.tt[ttSel]=JSON.parse(JSON.stringify(ttd));store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Time table save ho gaya.'}
- else if(b.id==='ttall'){if(!confirm('Sab bacchon ka time table isi jaisa ho jaayega. Pakka?'))return;S.tt=S.tt||{};S.students.forEach(x=>{S.tt[x.id]=JSON.parse(JSON.stringify(ttd))});store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Sab bacchon par lag gaya.'}
+ else if(b.id==='ttsave'){S.tt=S.tt||{};S.tt[ttSel]=JSON.parse(JSON.stringify(ttd));store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Timetable saved.'}
+ else if(b.id==='ttall'){if(!confirm('All students will get this timetable. Continue?'))return;S.tt=S.tt||{};S.students.forEach(x=>{S.tt[x.id]=JSON.parse(JSON.stringify(ttd))});store();dirty=false;const m=document.getElementById('ttmsg');if(m)m.textContent='Applied to all students.'}
  else if(d.wo){wOpen=!wOpen;draw()}
  else if(d.ws){wSub=d.ws;draw()}
  else if(d.wh!==undefined){const l=WH[+d.wh];if(l){addWk(l);draw()}}
@@ -526,20 +522,20 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sxapply'){sd.subs=parseSyl(document.querySelector('[data-sxe]').value,sd.subs);sd.stu=[...editStu];editTxt=false;mark();draw()}
  else if(b.id==='sxcancel'){editTxt=false;draw()}
  else if(d.sdel){if(pend==='syl'){S.syl=SY().filter(x=>x.id!==sylSel);pend=null;sylSel=null;sd=null;dirty=false;store()}else pend='syl';draw()}
- else if(b.id==='ssv'){const i=SY().findIndex(x=>x.id===sd.id);if(i>=0)S.syl[i]=JSON.parse(JSON.stringify(sd));store();dirty=false;draw();const e=document.getElementById('sv');if(e){e.textContent='Save ho gaya';e.className='mu'}}
+ else if(b.id==='ssv'){const i=SY().findIndex(x=>x.id===sd.id);if(i>=0)S.syl[i]=JSON.parse(JSON.stringify(sd));store();dirty=false;draw();const e=document.getElementById('sv');if(e){e.textContent='Saved';e.className='mu'}}
  else if(d.ns){b.classList.toggle('on');if(!newStu)newStu=S.students.map(s=>s.id);newStu=newStu.includes(d.ns)?newStu.filter(x=>x!==d.ns):[...newStu,d.ns]}
- else if(b.id==='snew'){const nm=document.querySelector('[data-sn]').value.trim(),subs=parseSyl(document.querySelector('[data-sx]').value),m=document.getElementById('smsg');if(!subs.length){m.textContent='Text khali hai ya sahi format me nahi hai. Subject ki line # se shuru honi chahiye.';return}SY().push({id:'y'+Date.now(),name:nm||'Syllabus',stu:newStu||S.students.map(s=>s.id),subs});newStu=null;store();draw()}
- else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copy ho gaya'}catch(x){b.textContent='Copy nahi hua'}}
+ else if(b.id==='snew'){const nm=document.querySelector('[data-sn]').value.trim(),subs=parseSyl(document.querySelector('[data-sx]').value),m=document.getElementById('smsg');if(!subs.length){m.textContent='The text is empty or in the wrong format. Each subject line must start with #.';return}SY().push({id:'y'+Date.now(),name:nm||'Syllabus',stu:newStu||S.students.map(s=>s.id),subs});newStu=null;store();draw()}
+ else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
  else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);waOpen(st,summaryText())}
- else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copy ho gaya'}catch(x){b.textContent='Copy nahi hua'}}
+ else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
  else if(b.id==='md'){MODE=MODE==='desk'?'phone':'desk';try{localStorage.setItem('tms_mode',MODE)}catch(x){}applyMode();draw()}
- else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);store();b.textContent='Save ho gaya'}
+ else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);store();b.textContent='Saved'}
  else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
- else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup download ho gaya.'}
+ else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup downloaded.'}
 });
 document.addEventListener('input',e=>{
  const t=e.target;
@@ -552,7 +548,7 @@ document.addEventListener('change',e=>{
  else if(t.dataset.pf&&t.files[0]){const kd=t.dataset.pf;shrink(t.files[0]).then(u=>{dph[kd]=u;mark();draw()}).catch(()=>{})}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
- else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup wapas aa gaya.'}else msg='Ye backup file sahi nahi lagti.'}catch(er){msg='Ye backup file sahi nahi lagti.'}draw()})}
+ else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup restored.'}else msg='This backup file looks invalid.'}catch(er){msg='This backup file looks invalid.'}draw()})}
 });
 setInterval(renderPB,30000);document.addEventListener('visibilitychange',renderPB);
 applyMode();
