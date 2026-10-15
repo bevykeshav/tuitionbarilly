@@ -119,8 +119,18 @@ function renderPB(){
 }
 function alarmOpen(b){
  const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4),d=new Date(base);
- if(!/Android/i.test(navigator.userAgent)){b.textContent='Alarm works only on Android phones';return}
- location.href='intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR='+d.getHours()+';i.android.intent.extra.alarm.MINUTES='+d.getMinutes()+';S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent('Send homework: '+st.name)+';end';
+ const title='Send homework: '+String(st.name).replace(/[,;\n]/g,' ');
+ const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
+ const ics=()=>{
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tuition//EN','BEGIN:VEVENT','UID:hw'+base+'@tuition','DTSTAMP:'+z(Date.now()),'DTSTART:'+z(base),'DTEND:'+z(base+9e5),'SUMMARY:'+title,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+title,'TRIGGER:PT0S','END:VALARM','END:VEVENT','END:VCALENDAR'];
+  dlFile('homework-reminder.ics',new Blob([L.join('\r\n')],{type:'text/calendar'}));
+  b.textContent='Reminder file downloaded. Tap it to add to Calendar';
+ };
+ if(!/Android/i.test(navigator.userAgent)){ics();return}
+ let left=false;const f=()=>{left=true};
+ document.addEventListener('visibilitychange',f,{once:true});window.addEventListener('blur',f,{once:true});
+ location.href='intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR='+d.getHours()+';i.android.intent.extra.alarm.MINUTES='+d.getMinutes()+';S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent(title)+';end';
+ setTimeout(()=>{document.removeEventListener('visibilitychange',f);window.removeEventListener('blur',f);if(!left&&!document.hidden)ics()},1800);
 }
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Not saved';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
