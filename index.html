@@ -117,10 +117,14 @@ function renderPB(){
  const a=pendList(),n=Date.now(),td=iso(new Date());
  e.innerHTML=a.length?`<div class="pbx"><b>Homework bhejna baaki (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">bhejne ka time ho gaya</span>':'<span class="mu">'+m+' min baad bhejna hai</span>'}</div><button class="sm" data-pb="${k}">Kholo</button><button class="sm" data-ps="${k}">Bhej diya</button></div>`}).join('')}</div>`:'';
 }
-function calUrl(){
- const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4);
+function calOpen(){
+ const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4),end=base+9e5;
+ const title='Homework bhejo: '+st.name,det=String(dr.hwtext||'').slice(0,500);
  const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
- return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Homework bhejo: '+st.name)+'&details='+encodeURIComponent(String(dr.hwtext||'').slice(0,500))+'&dates='+z(base)+'/'+z(base+9e5);
+ const web='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&details='+encodeURIComponent(det)+'&dates='+z(base)+'/'+z(end);
+ if(/Android/i.test(navigator.userAgent)){
+  location.href='intent://#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/event;S.title='+encodeURIComponent(title)+';S.description='+encodeURIComponent(det)+';l.beginTime='+base+';l.endTime='+end+';S.browser_fallback_url='+encodeURIComponent(web)+';end';
+ }else window.open(web,'_blank');
 }
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Save nahi hua';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
@@ -496,7 +500,7 @@ document.addEventListener('click',async e=>{
   dr.hwsent=Date.now();doSave();
   waOpen(st,t);
  }
- else if(b.id==='cal'){window.open(calUrl(),'_blank')}
+ else if(b.id==='cal'){calOpen()}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(b.id==='mk')mkpdf();
