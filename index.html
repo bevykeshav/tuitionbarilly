@@ -182,7 +182,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])}</div>
- <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Send Homework on WhatsApp</button><button class="sm" id="alm" style="margin-top:8px;width:100%">Set alarm for 1 hour (to send homework)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Send Homework on WhatsApp</button><button class="sm" id="hwscr" onclick="screenshotHomework()" style="margin-top:8px;width:100%">\ud83d\udcf8 Screenshot & Share</button><button class="sm" id="alm" style="margin-top:8px;width:100%">Set alarm for 1 hour (to send homework)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
  <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
@@ -502,6 +502,31 @@ async function generateHomeworkImage(){
  let y=60;hw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
  return canvas.toDataURL('image/png');
 }
+async function screenshotHomework(){
+ const st=S.students.find(s=>s.id===sel);
+ if(!dr.hwtext||!dr.hwtext.trim()){alert('Write homework first');return}
+ try{
+  const card=document.createElement('div');
+  card.style.cssText='background:#fff;padding:20px;border-radius:10px;width:350px;border:3px solid #1f5f4a;font-family:Arial;position:absolute;left:-9999px';
+  card.innerHTML=`<div style="text-align:center;margin-bottom:15px"><h2 style="margin:0;color:#1f5f4a">📝 HOMEWORK</h2></div><div style="font-size:14px;line-height:1.8"><p><b>👤 Student:</b> ${esc(st.name)} (Class ${esc(st.cls)})</p><p><b>📅 Date:</b> ${fmt(date)}</p><hr style="border:none;border-top:1px solid #ddd;margin:10px 0"><p><b>✏️ Homework:</b></p><p style="background:#f5f5f5;padding:10px;border-radius:5px">${esc(dr.hwtext).replace(/\n/g,'<br>')}</p><p><b>📊 Marks:</b> ${esc(dr.tmk||'Not entered')}</p><p><b>⭐ Rating:</b> ${esc(dr.rt||'Not set')}</p></div>`;
+  document.body.appendChild(card);
+  const cv=await html2canvas(card,{backgroundColor:'#ffffff',scale:2});
+  document.body.removeChild(card);
+  cv.toBlob(async blob=>{
+   const file=new File([blob],'homework_'+date+'.png',{type:'image/png'});
+   const st=S.students.find(s=>s.id===sel);
+   const msg=hwMessage(st);
+   if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:'Homework',text:msg})}catch(e){}
+   }else{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='homework_'+date+'.png';
+    a.click();
+   }
+  });
+ }catch(e){alert('Error generating image');console.error(e)}
+}
 async function generateClassworkImage(){
  const st=S.students.find(s=>s.id===sel);
  const cw=`📚 ${st.name} (Class ${st.cls})\n📅 ${fmt(date)}\n\n✅ COVERED IN CLASS:\n${dr.work}\n\n📖 Notebook: Checked\n⭐ Performance: ${dr.rt||'Not rated'}`;
@@ -514,25 +539,6 @@ async function generateClassworkImage(){
  ctx.font='12px Arial';ctx.fillStyle='#333';
  let y=60;cw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
  return canvas.toDataURL('image/png');
-}
-async function shareHomeworkWithImages(){
- const st=S.students.find(s=>s.id===sel);
- const r=dr;
- if(!r.hwtext||!r.hwtext.trim()){alert('Write the homework first');return}
- const t=hwMessage(st);
- try{
-  const hwImg=await generateHomeworkImage();
-  const cwImg=await generateClassworkImage();
-  const msg=t+'\n\n📸 Images attached for reference';
-  if(navigator.share){
-   await navigator.share({title:'Homework Update',text:msg});
-  }else{
-   waOpen(st,msg);
-  }
- }catch(e){
-  console.error(e);
-  waOpen(st,t);
- }
 }
 async function mkpdf(){
  const ms=document.getElementById('ms'),el=document.getElementById('rp');
