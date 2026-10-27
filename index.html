@@ -551,20 +551,23 @@ async function combinedPhotoShare(){
 
  canvas.toBlob(async blob=>{
   const file=new File([blob],'tuition_report_'+date+'.png',{type:'image/png'});
+  const st=S.students.find(s=>s.id===sel);
   const msg=hwMessage(st);
 
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-   try{
-    dr.hwsent=Date.now();doSave();
-    await navigator.share({files:[file],title:'Tuition Report',text:msg});
-   }catch(e){console.log('Share cancelled')}
-  }else{
-   const a=document.createElement('a');
-   a.href=URL.createObjectURL(blob);
-   a.download='tuition_report_'+date+'.png';
-   a.click();
-   dr.hwsent=Date.now();doSave();
-  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='tuition_report_'+date+'.png';
+  a.click();
+
+  dr.hwsent=Date.now();doSave();
+
+  setTimeout(()=>{
+   const p=(st&&st.ph)||'';
+   let ph=p;if(ph.length===10)ph='91'+ph;
+   const web='https://wa.me/'+ph+'?text='+encodeURIComponent(msg);
+   if(!/Android/i.test(navigator.userAgent))window.open(web,'_blank');
+   else location.href='intent://send?phone='+ph+'&text='+encodeURIComponent(msg)+'#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url='+encodeURIComponent(web)+';end';
+  },500);
  });
 }
 async function generateClassworkImage(){
