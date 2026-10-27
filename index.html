@@ -513,48 +513,45 @@ async function combinedPhotoShare(){
  if(!hwPhoto&&!wkPhoto&&!tsPhoto){alert('Upload at least one photo');return}
 
  const canvas=document.createElement('canvas');
- canvas.width=800;canvas.height=1000;
+ canvas.width=1200;canvas.height=450;
  const ctx=canvas.getContext('2d');
  ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
 
+ let x=20;
  let y=20;
- ctx.fillStyle='#1f5f4a';ctx.font='bold 24px Arial';
- ctx.fillText('📚 TUITION REPORT',20,y);y+=40;
+ ctx.fillStyle='#1f5f4a';ctx.font='bold 20px Arial';
+ ctx.fillText('📚 TUITION REPORT - '+st.name+' (Class '+st.cls+') | '+fmt(date),20,y);y+=40;
 
- ctx.font='16px Arial';ctx.fillStyle='#333';
- ctx.fillText('👤 '+st.name+' (Class '+st.cls+')',20,y);y+=30;
- ctx.fillText('📅 '+fmt(date),20,y);y+=50;
-
- const photoHeight=280;
  const photoWidth=350;
+ const photoHeight=280;
  const gap=30;
 
  if(hwPhoto){
   ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
-  ctx.fillText('📝 HOMEWORK',20,y);y+=20;
+  ctx.fillText('📝 HOMEWORK',x,y);
   const img=new Image();img.src=hwPhoto;
-  ctx.drawImage(img,20,y,photoWidth,photoHeight);
-  y+=photoHeight+gap;
+  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
+  x+=photoWidth+gap;
  }
 
  if(wkPhoto){
   ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
-  ctx.fillText('✅ CLASSWORK',20,y);y+=20;
+  ctx.fillText('✅ CLASSWORK',x,y);
   const img=new Image();img.src=wkPhoto;
-  ctx.drawImage(img,20,y,photoWidth,photoHeight);
-  y+=photoHeight+gap;
+  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
+  x+=photoWidth+gap;
  }
 
  if(tsPhoto){
   ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
-  ctx.fillText('📊 TEST',20,y);y+=20;
+  ctx.fillText('📊 TEST',x,y);
   const img=new Image();img.src=tsPhoto;
-  ctx.drawImage(img,20,y,photoWidth,photoHeight);
+  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
  }
 
  canvas.toBlob(async blob=>{
   const file=new File([blob],'tuition_report_'+date+'.png',{type:'image/png'});
-  const msg=hwMessage(st)+'\n\n📎 All photos attached in one image';
+  const msg=hwMessage(st)+'\n\n📎 All photos in one image';
 
   if(navigator.canShare&&navigator.canShare({files:[file]})){
    try{
