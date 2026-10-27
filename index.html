@@ -515,11 +515,11 @@ async function combinedPhotoShare(){
  const canvas=document.createElement('canvas');
  canvas.width=1200;canvas.height=450;
  const ctx=canvas.getContext('2d');
- ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.fillStyle='#1f5f4a';ctx.fillRect(0,0,canvas.width,canvas.height);
 
  let x=20;
  let y=20;
- ctx.fillStyle='#1f5f4a';ctx.font='bold 20px Arial';
+ ctx.fillStyle='#fff';ctx.font='bold 20px Arial';
  ctx.fillText('📚 TUITION REPORT - '+st.name+' (Class '+st.cls+') | '+fmt(date),20,y);y+=40;
 
  const photoWidth=350;
@@ -527,7 +527,7 @@ async function combinedPhotoShare(){
  const gap=30;
 
  if(hwPhoto){
-  ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
+  ctx.fillStyle='#fff';ctx.font='bold 14px Arial';
   ctx.fillText('📝 HOMEWORK',x,y);
   const img=new Image();img.src=hwPhoto;
   ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
@@ -535,7 +535,7 @@ async function combinedPhotoShare(){
  }
 
  if(wkPhoto){
-  ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
+  ctx.fillStyle='#fff';ctx.font='bold 14px Arial';
   ctx.fillText('✅ CLASSWORK',x,y);
   const img=new Image();img.src=wkPhoto;
   ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
@@ -543,7 +543,7 @@ async function combinedPhotoShare(){
  }
 
  if(tsPhoto){
-  ctx.fillStyle='#1f5f4a';ctx.font='bold 14px Arial';
+  ctx.fillStyle='#fff';ctx.font='bold 14px Arial';
   ctx.fillText('📊 TEST',x,y);
   const img=new Image();img.src=tsPhoto;
   ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
