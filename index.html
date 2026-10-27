@@ -39,6 +39,8 @@ textarea{min-height:72px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px}
 .sm{min-height:36px;padding:6px 12px;font-size:14px}
 .warn{color:#d9433f;font-weight:600}
+.fs{font-size:12px;color:var(--mu)}
+.hol{background:var(--soft);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px}
 .sb{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;background:var(--bg);padding:10px 0;border-top:1px solid var(--ln);margin-top:10px}
 .sb .pri{width:auto;flex:1}
 .desk body{max-width:1100px}
@@ -51,7 +53,7 @@ textarea{min-height:72px}
 .rp table{width:100%;border-collapse:collapse;margin:12px 0}
 .rp th,.rp td{border:1px solid #444;padding:6px;text-align:left;vertical-align:top}
 .rp th{background:#e8e8e8}
-.rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}
+.rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}.rp .h{color:#1565c0;font-weight:700}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Today's Entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Students</button></div>
 <div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
@@ -95,6 +97,24 @@ window.addEventListener('online',()=>{if(again)push()});
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---- Weekday, Sunday holiday and festival names ---- */
+const FX={'01-01':'New Year','01-14':'Makar Sankranti / Pongal','01-26':'Republic Day','04-14':'Ambedkar Jayanti','08-15':'Independence Day','09-05':"Teachers' Day",'10-02':'Gandhi Jayanti','11-14':"Children's Day",'12-25':'Christmas'};
+/* Festivals whose date changes every year (2026 and 2027). Eid dates depend on the moon, so they can shift by a day. Add or fix dates in Students > Settings > Custom holidays. */
+const FV={
+'2026-01-23':'Vasant Panchami','2026-02-15':'Maha Shivratri','2026-03-03':'Holika Dahan','2026-03-04':'Holi','2026-03-21':'Eid-ul-Fitr','2026-03-26':'Ram Navami','2026-03-31':'Mahavir Jayanti','2026-04-03':'Good Friday','2026-05-01':'Buddha Purnima','2026-05-27':'Bakrid (Eid-ul-Adha)','2026-06-26':'Muharram','2026-08-28':'Raksha Bandhan','2026-09-04':'Janmashtami','2026-09-14':'Ganesh Chaturthi','2026-10-11':'Navratri starts','2026-10-20':'Dussehra','2026-10-29':'Karwa Chauth','2026-11-06':'Dhanteras','2026-11-07':'Choti Diwali','2026-11-08':'Diwali','2026-11-09':'Govardhan Puja','2026-11-11':'Bhai Dooj','2026-11-15':'Chhath Puja','2026-11-24':'Guru Nanak Jayanti',
+'2027-02-11':'Vasant Panchami','2027-03-06':'Maha Shivratri','2027-03-10':'Eid-ul-Fitr','2027-03-21':'Holika Dahan','2027-03-22':'Holi','2027-04-15':'Ram Navami','2027-08-17':'Raksha Bandhan','2027-08-25':'Janmashtami','2027-09-04':'Ganesh Chaturthi','2027-10-19':'Dussehra','2027-10-29':'Diwali'};
+const dayName=d=>['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(d+'T00:00:00').getDay()];
+const isSun=d=>new Date(d+'T00:00:00').getDay()===0;
+const fest=d=>(S.hol&&S.hol[d])||FV[d]||FX[d.slice(5)]||'';
+const holTxt=()=>Object.keys(S.hol||{}).sort().map(k=>k+' '+S.hol[k]).join('\n');
+function parseHol(t){const o={};String(t||'').split(/\r?\n/).forEach(l=>{const m=l.trim().match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);if(m)o[m[1]]=m[2].trim()});return o}
+function dateInfo(d){
+ const f=fest(d),sun=isSun(d);
+ return `<div class="hol" style="margin:4px 0 8px"><b>${dayName(d)}</b>${sun?' | <b>Holiday (Sunday)</b>':''}${f?' | \u{1F389} '+esc(f):''}</div>`;
+}
+/* ---- end ---- */
+
 const today=new Date();
 let tab='entry',date=iso(today),sel=null,rs=null,pend=null,msg='',editId=null,newWt='b',editWt='b';
 let from=iso(new Date(today.getTime()-6*864e5)),to=iso(today);
@@ -152,15 +172,15 @@ function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][s
 function vEntry(){
  if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));if(isSun(date)&&!dr.att)dr.att='H';const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`).join('');
- const full=r.att!=='A';
- return `<input type="date" id="dt" value="${date}"><div class="chips">${chips}</div>${ttBanner()}
+ const full=r.att!=='A'&&r.att!=='H';
+ return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
- <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent']])}</div>
+ <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])}</div>
  <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="wa" style="margin-top:8px">Send Homework on WhatsApp</button><button class="sm" id="alm" style="margin-top:8px;width:100%">Set alarm for 1 hour (to send homework)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
@@ -394,6 +414,7 @@ function grpHw(txt){
 function hwMessage(st){
  const r=dr,pv=prevHw(sel,date),L=[];
  L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') - Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
+ if(fest(date))L.push('\u{1F389} '+fest(date));
  const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Today\'s timetable: '+tdy.join(', '));
  L.push('');
  const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
@@ -417,18 +438,19 @@ function stats(sid){
 }
 const col=(t,ok)=>t?`<span class="${ok?'g':'r'}">${t}</span>`:'-';
 function nbCell(r){const a=SUB().filter(s=>r['nb_'+s]==='S'),b=SUB().filter(s=>r['nb_'+s]==='H');return (a.length?'<span class="r">At school: '+a.map(esc).join(', ')+'</span>':'')+(a.length&&b.length?'<br>':'')+(b.length?'<span class="g">With child: '+b.map(esc).join(', ')+'</span>':'')||'-'}
+function dateCell(d){const f=fest(d);return fmt(d).slice(0,5)+'<br><span style="font-size:11px;color:#555">'+dayName(d).slice(0,3)+'</span>'+(f?'<br><span style="font-size:10px;color:#8a5a00">'+esc(f)+'</span>':'')}
 function build(){
  const st=S.students.find(s=>s.id===rs);if(!st)return '';
  const rows=stats(rs);
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'With child',S:'At school'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const body=rows.map(([d,r])=>`<tr><td>${fmt(d).slice(0,5)}</td><td>${col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework completed: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Not checked yet':'-')}${r.hwnote?'<br>Reason: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="8">No entries in this period.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${dateCell(d)}</td><td>${r.att==='H'?'<span class="h">Holiday</span>':col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework completed: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Not checked yet':'-')}${r.hwnote?'<br>Reason: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="8">No entries in this period.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} to ${fmt(to)}</p>
  <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Covered in Class</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
- <p><b>Summary:</b> <span class="g">Present: ${c('att','P')} days</span>, <span class="r">Absent: ${c('att','A')} days</span>. Homework completed: <span class="g">${c('hw','Y')} Yes</span>, <span class="r">${c('hw','N')} No</span>. Notebook kept at school (subject-wise count): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)}</span>.</p>
+ <p><b>Summary:</b> <span class="g">Present: ${c('att','P')} days</span>, <span class="r">Absent: ${c('att','A')} days</span>${c('att','H')?', <span class="h">Holiday: '+c('att','H')+' days</span>':''}. Homework completed: <span class="g">${c('hw','Y')} Yes</span>, <span class="r">${c('hw','N')} No</span>. Notebook kept at school (subject-wise count): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)}</span>.</p>
  ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topics completed (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} remaining.${x.per.length?'<br>Covered in this period: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
  <p>Tests taken: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
  <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
@@ -446,7 +468,7 @@ function vRep(){
 }
 function vStu(){
  const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
- return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><button class="pri" id="ss">Save Settings</button></div>
+ return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
  <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
@@ -543,7 +565,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
  else if(b.id==='md'){MODE=MODE==='desk'?'phone':'desk';try{localStorage.setItem('tms_mode',MODE)}catch(x){}applyMode();draw()}
- else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);store();b.textContent='Saved'}
+ else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);S.hol=parseHol(document.querySelector('[data-hol]').value);store();b.textContent='Saved'}
  else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
  else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup downloaded.'}
 });
