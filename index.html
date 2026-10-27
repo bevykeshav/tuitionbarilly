@@ -56,7 +56,7 @@ textarea{min-height:72px}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}.rp .h{color:#1565c0;font-weight:700}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Today's Entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Students</button></div>
-<div class="bar"><span class="mu" id="sy"></span><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
+<div class="bar"><div><span style="font-weight:600;font-size:18px" id="clk"></span><span class="mu" id="sy" style="margin-left:12px"></span></div><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
 <div id="pb"></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -708,6 +708,15 @@ document.addEventListener('change',e=>{
  else if(t.id==='to'&&t.value){to=t.value;draw()}
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup restored.'}else msg='This backup file looks invalid.'}catch(er){msg='This backup file looks invalid.'}draw()})}
 });
+function updateClock(){
+ const now=new Date();
+ const h=String(now.getHours()).padStart(2,'0');
+ const m=String(now.getMinutes()).padStart(2,'0');
+ const s=String(now.getSeconds()).padStart(2,'0');
+ const clk=document.getElementById('clk');
+ if(clk)clk.textContent=h+':'+m+':'+s;
+}
+setInterval(updateClock,1000);updateClock();
 setInterval(renderPB,30000);document.addEventListener('visibilitychange',renderPB);
 applyMode();
 draw();
