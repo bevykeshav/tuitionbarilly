@@ -489,6 +489,50 @@ function dlFile(name,blob){
  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(u),60000);
 }
+async function generateHomeworkImage(){
+ const st=S.students.find(s=>s.id===sel);
+ const hw=`📚 ${st.name} (Class ${st.cls})\n📅 ${fmt(date)}\n\n✏️ HOMEWORK:\n${dr.hwtext}\n\n📊 Marks: ${dr.tmk||'Not entered'}\n⭐ Rating: ${dr.rt||'Not set'}`;
+ const canvas=document.createElement('canvas');
+ canvas.width=400;canvas.height=300;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.strokeStyle='#1f5f4a';ctx.lineWidth=2;ctx.strokeRect(5,5,canvas.width-10,canvas.height-10);
+ ctx.fillStyle='#1f5f4a';ctx.font='bold 16px Arial';ctx.fillText('📝 HOMEWORK UPDATE',15,35);
+ ctx.font='12px Arial';ctx.fillStyle='#333';
+ let y=60;hw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
+ return canvas.toDataURL('image/png');
+}
+async function generateClassworkImage(){
+ const st=S.students.find(s=>s.id===sel);
+ const cw=`📚 ${st.name} (Class ${st.cls})\n📅 ${fmt(date)}\n\n✅ COVERED IN CLASS:\n${dr.work}\n\n📖 Notebook: Checked\n⭐ Performance: ${dr.rt||'Not rated'}`;
+ const canvas=document.createElement('canvas');
+ canvas.width=400;canvas.height=300;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.strokeStyle='#5cb592';ctx.lineWidth=2;ctx.strokeRect(5,5,canvas.width-10,canvas.height-10);
+ ctx.fillStyle='#5cb592';ctx.font='bold 16px Arial';ctx.fillText('✅ CLASSWORK UPDATE',15,35);
+ ctx.font='12px Arial';ctx.fillStyle='#333';
+ let y=60;cw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
+ return canvas.toDataURL('image/png');
+}
+async function shareHomeworkWithImages(){
+ const st=S.students.find(s=>s.id===sel);
+ if(!r.hwtext||!r.hwtext.trim()){alert('Write the homework first');return}
+ const t=hwMessage(st);
+ try{
+  const hwImg=await generateHomeworkImage();
+  const cwImg=await generateClassworkImage();
+  const msg=t+'\n\n📸 Images attached for reference';
+  if(navigator.share){
+   await navigator.share({title:'Homework Update',text:msg});
+  }else{
+   waOpen(st,msg);
+  }
+ }catch(e){
+  console.error(e);
+  waOpen(st,t);
+ }
+}
 async function mkpdf(){
  const ms=document.getElementById('ms'),el=document.getElementById('rp');
  ms.textContent='Creating PDF...';
@@ -525,9 +569,11 @@ document.addEventListener('click',async e=>{
  else if(b.id==='wa'){
   const st=S.students.find(s=>s.id===sel),r=dr;
   if(!r.hwtext||!r.hwtext.trim()){b.textContent='Write the homework first';return}
+  b.textContent='Generating image...';
   const t=hwMessage(st);
   dr.hwsent=Date.now();doSave();
-  waOpen(st,t);
+  shareHomeworkWithImages();
+  setTimeout(()=>{b.textContent='Send Homework on WhatsApp'},2000);
  }
  else if(b.id==='alm'){alarmOpen(b)}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
