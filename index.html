@@ -517,6 +517,7 @@ async function generateClassworkImage(){
 }
 async function shareHomeworkWithImages(){
  const st=S.students.find(s=>s.id===sel);
+ const r=dr;
  if(!r.hwtext||!r.hwtext.trim()){alert('Write the homework first');return}
  const t=hwMessage(st);
  try{
