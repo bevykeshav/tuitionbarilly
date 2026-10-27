@@ -154,6 +154,7 @@ function alarmOpen(b){
 }
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Not saved';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
+function setMarks(marks){dr.tmk=marks;mark();draw()}
 function okLeave(){if(!dirty)return true;if(confirm('You have unsaved changes. Leave without saving?')){dirty=false;dk='';ttk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
 function doSave(){
  if((dr.hwtext||'').trim()){if(!dr.hwat)dr.hwat=Date.now()}else{delete dr.hwat;delete dr.hwsent}
@@ -185,7 +186,7 @@ function vEntry(){
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
  <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
- <div class="fb"><label>Test (if taken)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"><input data-t="tmk" placeholder="Marks e.g. 18/20" value="${esc(r.tmk)}" style="max-width:140px"></div>${photoUI('ts','Test or marks photo')}</div>
+ <div class="fb"><label>Test (if taken)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"></div><div class="row"><input data-t="tmk" placeholder="Marks (e.g. 18/20)" value="${esc(r.tmk)}" style="flex:1"></div><div class="seg" style="margin:8px 0"><button class="qb" onclick="setMarks('10/10')" style="flex:1;font-size:0.9em">10/10 ✅</button><button class="qb" onclick="setMarks('15/20')" style="flex:1;font-size:0.9em">15/20</button><button class="qb" onclick="setMarks('18/20')" style="flex:1;font-size:0.9em">18/20</button><button class="qb" onclick="setMarks('20/20')" style="flex:1;font-size:0.9em">20/20 🌟</button></div><div class="seg"><button class="qb" onclick="setMarks('5/10')" style="flex:1;font-size:0.9em">5/10</button><button class="qb" onclick="setMarks('7/10')" style="flex:1;font-size:0.9em">7/10</button><button class="qb" onclick="setMarks('8/10')" style="flex:1;font-size:0.9em">8/10</button><button class="qb" onclick="setMarks('9/10')" style="flex:1;font-size:0.9em">9/10</button></div>${photoUI('ts','Test or marks photo')}</div>
  <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
  <div class="fb"><label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>
  </div></div>
@@ -573,6 +574,30 @@ document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.t){setF(t.dataset.t,t.value,false)}
  else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
+});
+
+document.addEventListener('paste',e=>{
+ const t=e.target;
+ if(t.tagName==='TEXTAREA'||t.tagName==='INPUT'){
+  e.preventDefault();
+  const text=e.clipboardData.getData('text/plain');
+  if(t.dataset.t){
+   setF(t.dataset.t,text,false);
+   draw();
+  }else if(t.dataset.rn!==undefined){
+   dhn=text;
+   mark();
+   draw();
+  }else if(t.dataset.sxe!==undefined){
+   t.value=text;
+   mark();
+   draw();
+  }else if(t.dataset.sx!==undefined){
+   t.value=text;
+  }else{
+   t.value=text;
+  }
+ }
 });
 document.addEventListener('change',e=>{
  const t=e.target;
