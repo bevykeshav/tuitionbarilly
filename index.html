@@ -137,21 +137,6 @@ function renderPB(){
  const a=pendList(),n=Date.now(),td=iso(new Date());
  e.innerHTML=a.length?`<div class="pbx"><b>Homework to send (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">time to send</span>':'<span class="mu">send in '+m+' min</span>'}</div><button class="sm" data-pb="${k}">Open</button><button class="sm" data-ps="${k}">Mark sent</button></div>`}).join('')}</div>`:'';
 }
-function alarmOpen(b){
- const st=S.students.find(x=>x.id===sel)||{name:''},base=Math.max((dr.hwat||Date.now())+HRM,Date.now()+12e4),d=new Date(base);
- const title='Send homework: '+String(st.name).replace(/[,;\n]/g,' ');
- const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
- const ics=()=>{
-  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tuition//EN','BEGIN:VEVENT','UID:hw'+base+'@tuition','DTSTAMP:'+z(Date.now()),'DTSTART:'+z(base),'DTEND:'+z(base+9e5),'SUMMARY:'+title,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+title,'TRIGGER:PT0S','END:VALARM','END:VEVENT','END:VCALENDAR'];
-  dlFile('homework-reminder.ics',new Blob([L.join('\r\n')],{type:'text/calendar'}));
-  b.textContent='Reminder file downloaded. Tap it to add to Calendar';
- };
- if(!/Android/i.test(navigator.userAgent)){ics();return}
- let left=false;const f=()=>{left=true};
- document.addEventListener('visibilitychange',f,{once:true});window.addEventListener('blur',f,{once:true});
- location.href='intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR='+d.getHours()+';i.android.intent.extra.alarm.MINUTES='+d.getMinutes()+';S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent(title)+';end';
- setTimeout(()=>{document.removeEventListener('visibilitychange',f);window.removeEventListener('blur',f);if(!left&&!document.hidden)ics()},1800);
-}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Not saved';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
 function setMarks(marks){dr.tmk=marks;mark();draw()}
@@ -182,7 +167,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])}</div>
- <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="sm" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px;width:100%;background:#5cb592">\ud83d\udcce Share All Photos on WhatsApp</button><button class="sm" id="alm" style="margin-top:8px;width:100%">Set alarm for 1 hour (to send homework)</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="sm" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px;width:100%;background:#5cb592">\ud83d\udcce Share All Photos on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
  <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
@@ -630,7 +615,6 @@ document.addEventListener('click',async e=>{
   shareHomeworkWithImages();
   setTimeout(()=>{b.textContent='Send Homework on WhatsApp'},2000);
  }
- else if(b.id==='alm'){alarmOpen(b)}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(b.id==='mk')mkpdf();
