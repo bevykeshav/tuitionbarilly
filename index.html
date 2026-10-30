@@ -137,6 +137,24 @@ function renderPB(){
  const a=pendList(),n=Date.now(),td=iso(new Date());
  e.innerHTML=a.length?`<div class="pbx"><b>Homework to send (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">time to send</span>':'<span class="mu">send in '+m+' min</span>'}</div><button class="sm" data-pb="${k}">Open</button><button class="sm" data-ps="${k}">Mark sent</button></div>`}).join('')}</div>`:'';
 }
+function alarmEnd(b){
+ if(!S.endTime){b.textContent='First set Tuition end time in Students > Settings';return}
+ const q=S.endTime.split(':').map(Number);
+ let d=new Date();d.setHours(q[0],q[1],0,0);d=new Date(d.getTime()-5*6e4);
+ if(d.getTime()<Date.now()+6e4)d=new Date(d.getTime()+864e5);
+ const title='Tuition ends in 5 min: give homework';
+ const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
+ const ics=()=>{
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tuition//EN','BEGIN:VEVENT','UID:end'+d.getTime()+'@tuition','DTSTAMP:'+z(Date.now()),'DTSTART:'+z(d.getTime()),'DTEND:'+z(d.getTime()+3e5),'SUMMARY:'+title,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+title,'TRIGGER:PT0S','END:VALARM','END:VEVENT','END:VCALENDAR'];
+  dlFile('tuition-end-reminder.ics',new Blob([L.join('\r\n')],{type:'text/calendar'}));
+  b.textContent='Reminder file downloaded. Tap it to add to Calendar';
+ };
+ if(!/Android/i.test(navigator.userAgent)){ics();return}
+ let left=false;const f=()=>{left=true};
+ document.addEventListener('visibilitychange',f,{once:true});window.addEventListener('blur',f,{once:true});
+ location.href='intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR='+d.getHours()+';i.android.intent.extra.alarm.MINUTES='+d.getMinutes()+';S.android.intent.extra.alarm.MESSAGE='+encodeURIComponent(title)+';end';
+ setTimeout(()=>{document.removeEventListener('visibilitychange',f);window.removeEventListener('blur',f);if(!left&&!document.hidden)ics()},1800);
+}
 function mark(){dirty=true;const e=document.getElementById('sv');if(e){e.textContent='Not saved';e.className='warn'}}
 function setF(f,v,tog){dr[f]=(tog&&dr[f]===v)?'':v;mark()}
 function setMarks(marks){dr.tmk=marks;mark();draw()}
@@ -162,7 +180,7 @@ function vEntry(){
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`).join('');
  const full=r.att!=='A'&&r.att!=='H';
- return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<div class="chips">${chips}</div>${ttBanner()}
+ return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${S.endTime?' ('+esc(S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
@@ -454,7 +472,7 @@ function vRep(){
 }
 function vStu(){
  const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
- return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
+ return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Tuition end time (alarm rings 5 min before)</label><input type="time" data-end value="${esc(S.endTime||'')}"><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
  <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
@@ -543,6 +561,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt});store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
+ else if(b.id==='alm'){alarmEnd(b)}
  else if(b.id==='mk')mkpdf();
  else if(d.gtt){if(!okLeave())return;tab='stu';ttSel=sel;ttk='';draw();const e=document.getElementById('ttcard');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth'})}
  else if(d.tts){if(!okLeave())return;ttSel=d.tts;ttk='';draw()}
@@ -577,7 +596,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
  else if(b.id==='md'){MODE=MODE==='desk'?'phone':'desk';try{localStorage.setItem('tms_mode',MODE)}catch(x){}applyMode();draw()}
- else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);S.hol=parseHol(document.querySelector('[data-hol]').value);store();b.textContent='Saved'}
+ else if(b.id==='ss'){S.teacher=document.querySelector('[data-teacher]').value.trim()||S.teacher;S.subjects=document.querySelector('[data-subjects]').value.split(',').map(x=>x.trim()).filter(Boolean);S.hol=parseHol(document.querySelector('[data-hol]').value);S.endTime=document.querySelector('[data-end]').value;store();b.textContent='Saved'}
  else if(b.id==='cu'){const v=document.querySelector('[data-cu]').value.trim();CU=v;try{localStorage.setItem('tms_url',v)}catch(x){}if(S.students.length&&!S.ts){S.ts=Date.now();persist()}draw();pull()}
  else if(b.id==='bk'){dlFile('tuition-backup.json',new Blob([JSON.stringify(S)],{type:'application/json'}));document.getElementById('ms').textContent='Backup downloaded.'}
 });
