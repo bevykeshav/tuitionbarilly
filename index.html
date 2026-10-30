@@ -167,7 +167,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])}</div>
- <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="sm" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px;width:100%;background:#5cb592">\ud83d\udcce Share All Photos on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}</div>
  <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
@@ -474,112 +474,39 @@ function dlFile(name,blob){
  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(u),60000);
 }
-async function generateHomeworkImage(){
- const st=S.students.find(s=>s.id===sel);
- const hw=`📚 ${st.name} (Class ${st.cls})\n📅 ${fmt(date)}\n\n✏️ HOMEWORK:\n${dr.hwtext}\n\n📊 Marks: ${dr.tmk||'Not entered'}\n⭐ Rating: ${dr.rt||'Not set'}`;
- const canvas=document.createElement('canvas');
- canvas.width=400;canvas.height=300;
- const ctx=canvas.getContext('2d');
- ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
- ctx.strokeStyle='#1f5f4a';ctx.lineWidth=2;ctx.strokeRect(5,5,canvas.width-10,canvas.height-10);
- ctx.fillStyle='#1f5f4a';ctx.font='bold 16px Arial';ctx.fillText('📝 HOMEWORK UPDATE',15,35);
- ctx.font='12px Arial';ctx.fillStyle='#333';
- let y=60;hw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
- return canvas.toDataURL('image/png');
-}
+function loadImg(src){return new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src})}
 async function combinedPhotoShare(){
  const st=S.students.find(s=>s.id===sel);
  if(!dr.hwtext||!dr.hwtext.trim()){alert('Write homework first');return}
-
- const hwPhoto=PH[pkk(date,sel,'hw')];
- const wkPhoto=PH[pkk(date,sel,'wk')];
- const tsPhoto=PH[pkk(date,sel,'ts')];
- const msg=hwMessage(st);
-
+ const photos=[['\u{1F4DD} HOMEWORK',PH[pkk(date,sel,'hw')]],['\u2705 COVERED IN TODAY\'S CLASS',PH[pkk(date,sel,'wk')]],['\u{1F4CA} TEST',PH[pkk(date,sel,'ts')]]].filter(x=>x[1]);
+ const text=hwMessage(st);
  dr.hwsent=Date.now();doSave();
-
- if(!hwPhoto&&!wkPhoto&&!tsPhoto){
-  setTimeout(()=>{
-   const p=(st&&st.ph)||'';
-   let ph=p;if(ph.length===10)ph='91'+ph;
-   const web='https://wa.me/'+ph+'?text='+encodeURIComponent(msg);
-   if(!/Android/i.test(navigator.userAgent))window.open(web,'_blank');
-   else location.href='intent://send?phone='+ph+'&text='+encodeURIComponent(msg)+'#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url='+encodeURIComponent(web)+';end';
-  },500);
-  return;
- }
-
+ if(!photos.length){setTimeout(()=>waOpen(st,text),500);return}
  const canvas=document.createElement('canvas');
  canvas.width=1200;canvas.height=450;
  const ctx=canvas.getContext('2d');
  ctx.fillStyle='#1f5f4a';ctx.fillRect(0,0,canvas.width,canvas.height);
-
- let x=20;
- let y=20;
  ctx.fillStyle='#fff';ctx.font='bold 20px Arial';
- ctx.fillText('📚 TUITION REPORT - '+st.name+' (Class '+st.cls+') | '+fmt(date),20,y);y+=40;
-
- const photoWidth=350;
- const photoHeight=280;
- const gap=30;
-
- if(hwPhoto){
+ ctx.fillText('\u{1F4DA} TUITION REPORT - '+st.name+' (Class '+st.cls+') | '+fmt(date),20,30);
+ let x=20;const y=70,w=350,h=280,gap=30;
+ for(const [label,src] of photos){
   ctx.fillStyle='#fff';ctx.font='bold 18px Arial';
-  ctx.fillText('📝 HOMEWORK',x,y);
-  const img=new Image();img.src=hwPhoto;
-  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
-  x+=photoWidth+gap;
+  ctx.fillText(label,x,y);
+  const img=await loadImg(src);
+  if(img)ctx.drawImage(img,x,y+20,w,h);
+  x+=w+gap;
  }
-
- if(wkPhoto){
-  ctx.fillStyle='#fff';ctx.font='bold 18px Arial';
-  ctx.fillText('✅ COVERED IN TODAY\'S CLASS',x,y);
-  const img=new Image();img.src=wkPhoto;
-  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
-  x+=photoWidth+gap;
- }
-
- if(tsPhoto){
-  ctx.fillStyle='#fff';ctx.font='bold 18px Arial';
-  ctx.fillText('📊 TEST',x,y);
-  const img=new Image();img.src=tsPhoto;
-  ctx.drawImage(img,x,y+20,photoWidth,photoHeight);
- }
-
  canvas.toBlob(async blob=>{
   const file=new File([blob],'tuition_report_'+date+'.png',{type:'image/png'});
-
-  setTimeout(async ()=>{
-   try{
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-     await navigator.share({files:[file],title:'Tuition Report',text:msg});
-    }else{
-     const a=document.createElement('a');
-     a.href=URL.createObjectURL(blob);
-     a.download='tuition_report_'+date+'.png';
-     a.click();
-     const p=(st&&st.ph)||'';
-     let ph=p;if(ph.length===10)ph='91'+ph;
-     const web='https://wa.me/'+ph+'?text='+encodeURIComponent(msg);
-     if(!/Android/i.test(navigator.userAgent))window.open(web,'_blank');
-     else location.href='intent://send?phone='+ph+'&text='+encodeURIComponent(msg)+'#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url='+encodeURIComponent(web)+';end';
-    }
-   }catch(e){console.log('Share failed or cancelled')}
-  },500);
+  try{
+   if(navigator.canShare&&navigator.canShare({files:[file]})){
+    await navigator.share({files:[file],title:'Tuition Report',text:text});
+   }else{
+    dlFile('tuition_report_'+date+'.png',blob);
+    waOpen(st,text);
+   }
+  }catch(e){console.log('Share failed or cancelled')}
  });
-}
-async function generateClassworkImage(){
- const st=S.students.find(s=>s.id===sel);
- const cw=`📚 ${st.name} (Class ${st.cls})\n📅 ${fmt(date)}\n\n✅ COVERED IN CLASS:\n${dr.work}\n\n📖 Notebook: Checked\n⭐ Performance: ${dr.rt||'Not rated'}`;
- const canvas=document.createElement('canvas');
- canvas.width=400;canvas.height=300;
- const ctx=canvas.getContext('2d');
- ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
- ctx.strokeStyle='#5cb592';ctx.lineWidth=2;ctx.strokeRect(5,5,canvas.width-10,canvas.height-10);
- ctx.fillStyle='#5cb592';ctx.font='bold 16px Arial';ctx.fillText('✅ CLASSWORK UPDATE',15,35);
- ctx.font='12px Arial';ctx.fillStyle='#333';
- let y=60;cw.split('\n').forEach(line=>{ctx.fillText(line,15,y);y+=20;});
- return canvas.toDataURL('image/png');
 }
 async function mkpdf(){
  const ms=document.getElementById('ms'),el=document.getElementById('rp');
@@ -614,15 +541,6 @@ document.addEventListener('click',async e=>{
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt});store();draw()}}
- else if(b.id==='wa'){
-  const st=S.students.find(s=>s.id===sel),r=dr;
-  if(!r.hwtext||!r.hwtext.trim()){b.textContent='Write the homework first';return}
-  b.textContent='Generating image...';
-  const t=hwMessage(st);
-  dr.hwsent=Date.now();doSave();
-  shareHomeworkWithImages();
-  setTimeout(()=>{b.textContent='Send Homework on WhatsApp'},2000);
- }
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(b.id==='mk')mkpdf();
@@ -668,28 +586,15 @@ document.addEventListener('input',e=>{
  if(t.dataset.t){setF(t.dataset.t,t.value,false)}
  else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
 });
-
 document.addEventListener('paste',e=>{
  const t=e.target;
  if(t.tagName==='TEXTAREA'||t.tagName==='INPUT'){
   e.preventDefault();
   const text=e.clipboardData.getData('text/plain');
-  if(t.dataset.t){
-   setF(t.dataset.t,text,false);
-   draw();
-  }else if(t.dataset.rn!==undefined){
-   dhn=text;
-   mark();
-   draw();
-  }else if(t.dataset.sxe!==undefined){
-   t.value=text;
-   mark();
-   draw();
-  }else if(t.dataset.sx!==undefined){
-   t.value=text;
-  }else{
-   t.value=text;
-  }
+  if(t.dataset.t){setF(t.dataset.t,text,false);draw()}
+  else if(t.dataset.rn!==undefined){dhn=text;mark();draw()}
+  else if(t.dataset.sxe!==undefined){t.value=text;mark();draw()}
+  else t.value=text;
  }
 });
 document.addEventListener('change',e=>{
@@ -701,12 +606,9 @@ document.addEventListener('change',e=>{
  else if(t.id==='rs'&&t.files[0]){t.files[0].text().then(x=>{try{const o=JSON.parse(x);if(o&&Array.isArray(o.students)){S=Object.assign({students:[],recs:{},teacher:S.teacher,subjects:S.subjects},o);store();msg='Backup restored.'}else msg='This backup file looks invalid.'}catch(er){msg='This backup file looks invalid.'}draw()})}
 });
 function updateClock(){
- const now=new Date();
- const h=String(now.getHours()).padStart(2,'0');
- const m=String(now.getMinutes()).padStart(2,'0');
- const s=String(now.getSeconds()).padStart(2,'0');
+ const now=new Date(),z=n=>String(n).padStart(2,'0');
  const clk=document.getElementById('clk');
- if(clk)clk.textContent=h+':'+m+':'+s;
+ if(clk)clk.textContent=z(now.getHours())+':'+z(now.getMinutes())+':'+z(now.getSeconds());
 }
 setInterval(updateClock,1000);updateClock();
 setInterval(renderPB,30000);document.addEventListener('visibilitychange',renderPB);
