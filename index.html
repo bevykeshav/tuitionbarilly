@@ -138,10 +138,16 @@ function renderPB(){
  e.innerHTML=a.length?`<div class="pbx"><b>Homework to send (${a.length})</b>${a.map(x=>{const m=Math.ceil((x.due-n)/6e4),late=m<=0,k=x.d+'|'+x.s.id;return `<div class="row"><div>${esc(x.s.name)}${x.d!==td?' <span class="mu">('+fmt(x.d).slice(0,5)+')</span>':''}: ${late?'<span class="warn">time to send</span>':'<span class="mu">send in '+m+' min</span>'}</div><button class="sm" data-pb="${k}">Open</button><button class="sm" data-ps="${k}">Mark sent</button></div>`}).join('')}</div>`:'';
 }
 function alarmEnd(b){
- if(!S.endTime){b.textContent='First set Tuition end time in Students > Settings';return}
- const q=S.endTime.split(':').map(Number);
+ const stu=S.students.find(x=>x.id===sel),et=(stu&&stu.et)||S.endTime;
+ if(!et){b.textContent='First set the tuition end time (Students tab > Edit student)';return}
+ const q=et.split(':').map(Number);
  let d=new Date();d.setHours(q[0],q[1],0,0);d=new Date(d.getTime()-5*6e4);
  if(d.getTime()<Date.now()+6e4)d=new Date(d.getTime()+864e5);
+ const hm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),key=iso(d)+' '+hm;
+ let A={};try{A=JSON.parse(localStorage.getItem('tms_alm')||'{}')}catch(x){}
+ Object.keys(A).forEach(k=>{if(k.slice(0,10)<iso(new Date()))delete A[k]});
+ if(A[key]&&window._almWarn!==key){window._almWarn=key;b.textContent='Alarm for '+hm+' is already set. Tap again only if you want one more';return}
+ A[key]=1;try{localStorage.setItem('tms_alm',JSON.stringify(A))}catch(x){}
  const title='Tuition ends in 5 min: give homework';
  const z=t=>new Date(t).toISOString().replace(/[-:]|\.\d{3}/g,'');
  const ics=()=>{
@@ -180,7 +186,7 @@ function vEntry(){
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`).join('');
  const full=r.att!=='A'&&r.att!=='H';
- return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${S.endTime?' ('+esc(S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
+ return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${(st.et||S.endTime)?' ('+esc(st.et||S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
@@ -471,9 +477,9 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
- return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Tuition end time (alarm rings 5 min before)</label><input type="time" data-end value="${esc(S.endTime||'')}"><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
- <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<button class="pri" id="add" style="margin-top:10px">Add</button></div>
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Tuition end time</label><input type="time" data-ee value="${esc(s.et||'')}"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.et?' | ends '+esc(s.et):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
+ return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Default tuition end time (used only if a student has no time)</label><input type="time" data-end value="${esc(S.endTime||'')}"><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
+ <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Tuition end time</label><input type="time" id="ne"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
  <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button></div>
@@ -558,7 +564,7 @@ document.addEventListener('click',async e=>{
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt});store();draw()}}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,et:document.getElementById('ne').value});store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(b.id==='alm'){alarmEnd(b)}
@@ -591,7 +597,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
- else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;store()}editId=null;draw()}
+ else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.et=document.querySelector('[data-ee]').value;store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);waOpen(st,summaryText())}
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
