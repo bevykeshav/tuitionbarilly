@@ -229,6 +229,7 @@ function summaryText(){
  if(nb)neg.push('\u274C Notebook was kept at school: '+pl(nb,'time','times'));
  if(tn&&ta!==null&&ta<40)neg.push('\u274C Low test average: '+ta+'%');
  if(bad)neg.push('\u274C Needs improvement (Bad rating): '+pl(bad,'time','times'));
+ repFlags(rs,to,false).reverse().forEach(t=>neg.unshift('\u203C\uFE0F *REPEATED: '+t+'*'));
  const L=['\u{1F4CA} *'+st.name+' (Class '+st.cls+') - Progress Report*','\u{1F5D3}\uFE0F '+fmt(from)+' to '+fmt(to),''];
  if(pos.length)L.push('\u{1F31F} *Highlights*',...pos,'');
  L.push('\u26A0\uFE0F *Areas to Improve*');
@@ -421,24 +422,70 @@ function grpHw(txt){
  });
  return {groups,other};
 }
+function recFor(sid,d,live){
+ if(live&&sid===sel&&d===date)return dr;
+ return (S.recs[d]||{})[sid]||{};
+}
+function weekCount(sid,endD,live){
+ const c={hwN:0,hwY:0,nb:0,abs:0,pres:0,bad:0,low:0};
+ const e=new Date(endD+'T00:00:00'),p0=(live&&sid===sel)?prevHw(sel,date):null;
+ for(let i=0;i<7;i++){
+  const d=iso(new Date(e.getTime()-i*864e5)),r=recFor(sid,d,live);
+  let hw=r.hw;if(p0&&d===p0&&dhw!==undefined)hw=dhw;
+  if(hw==='N')c.hwN++;
+  if(hw==='Y')c.hwY++;
+  if(r.att==='A')c.abs++;
+  if(r.att==='P')c.pres++;
+  if(SUB().some(x=>r['nb_'+x]==='S'))c.nb++;
+  if(r.rt==='Bad')c.bad++;
+  const pc=pct(r);if(pc!==null&&pc<40)c.low++;
+ }
+ return c;
+}
+function repFlags(sid,endD,live){
+ const c=weekCount(sid,endD,live),a=[];
+ if(c.hwN>=2)a.push('Homework not completed '+c.hwN+' times in the last 7 days');
+ if(c.nb>=2)a.push('Notebook kept at school on '+c.nb+' days in the last 7 days');
+ if(c.abs>=2)a.push('Absent '+c.abs+' days in the last 7 days');
+ if(c.bad>=2)a.push('Bad rating '+c.bad+' times in the last 7 days');
+ if(c.low>=2)a.push('Low test marks '+c.low+' times in the last 7 days');
+ return a;
+}
+function dayFlags(){
+ const r=dr,neg=[];
+ if(r.att==='A')neg.push('Absent today');
+ if(dhw==='N'&&prevHw(sel,date))neg.push('Previous homework not completed'+((dhn||'').trim()?' (Reason: '+dhn.trim()+')':''));
+ const nbs=SUB().filter(x=>r['nb_'+x]==='S');
+ if(nbs.length)neg.push('Notebook kept at school: '+nbs.join(', '));
+ const pc=pct(r);if(pc!==null&&pc<40)neg.push('Low test marks: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
+ if(r.rt==='Bad')neg.push('Rating: Bad, needs improvement');
+ const nn=String(r.nnote||'').trim();if(nn)neg.push('Note: '+nn);
+ return neg;
+}
 function hwMessage(st){
  const r=dr,pv=prevHw(sel,date),L=[];
  L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') - Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
  if(fest(date))L.push('\u{1F389} '+fest(date));
  const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Today\'s timetable: '+tdy.join(', '));
  L.push('');
+ const fl=dayFlags(),rp=repFlags(sel,date,true);
+ if(fl.length||rp.length){L.push('\u{1F534}\u{1F534} *NEEDS ATTENTION TODAY* \u{1F534}\u{1F534}');fl.forEach(t=>L.push('\u{1F534} '+t));rp.forEach(t=>L.push('\u203C\uFE0F *REPEATED: '+t+'*'));L.push('')}
  const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
  if(wl.length){L.push('\u2705 *Covered in today\'s class*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
- const pn=String(r.pnote||'').trim(),nn=String(r.nnote||'').trim();
- if(pn){L.push('\u{1F7E2} *Positive note*',pn,'')}
- if(nn){L.push('\u{1F534} *Negative note*',nn,'')}
  const g=grpHw(r.hwtext);
  L.push('\u{1F4DD} *Today\'s Homework*');
  g.groups.forEach((x,gi)=>{if(gi)L.push('');L.push('\u{1F4D6} *'+x.sub+'*');x.items.forEach((t,i)=>L.push((i+1)+'. '+t))});
  if(g.groups.length&&g.other.length)L.push('');
  g.other.forEach((t,i)=>L.push((g.groups.length?'\u2022 ':(g.other.length>1?(i+1)+'. ':''))+t));
  L.push('');
- if(pv&&dhw)L.push(dhw==='Y'?'\u{1F31F} Previous homework: completed. Well done!':'\u{1F4CC} Previous homework: not completed'+((dhn||'').trim()?' (Reason: '+dhn.trim()+')':''),'');
+ if(pv&&dhw==='Y')L.push('\u{1F31F} Previous homework: completed. Well done!','');
+ const gd=[],pn=String(r.pnote||'').trim(),wc=weekCount(sel,date,true),pc=pct(r);
+ if(pn)gd.push(pn);
+ if(wc.hwY>0)gd.push('Homework completed '+wc.hwY+(wc.hwY===1?' time':' times')+' in the last 7 days');
+ if(wc.pres>0)gd.push('Present '+wc.pres+(wc.pres===1?' day':' days')+' in the last 7 days');
+ if(['Good','Better','Best'].includes(r.rt))gd.push('Today\'s rating: '+r.rt);
+ if(pc!==null&&pc>=40)gd.push('Test: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
+ if(gd.length){L.push('\u{1F7E2} *GOOD THINGS*');gd.forEach(t=>L.push('\u2705 '+t));L.push('')}
  SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topics completed ('+Math.round(d*100/t)+'%)')});
  if(L[L.length-1]!=='')L.push('');
  L.push('Kindly ensure the homework is completed before the next class and encourage a little revision every day. Please feel free to reach out with any questions.','- '+S.teacher+' (Tuition Teacher)');
@@ -462,6 +509,7 @@ function build(){
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} to ${fmt(to)}</p>
+ ${(()=>{const a=repFlags(rs,to,false);return a.length?'<div style="border:2px solid #c62828;background:#fdecea;padding:8px;margin:8px 0"><b class="r">REPEATED ISSUES (last 7 days)</b>'+a.map(t=>'<div class="r">\u203C '+esc(t)+'</div>').join('')+'</div>':''})()}
  <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Covered in Class</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
  <p><b>Summary:</b> <span class="g">Present: ${c('att','P')} days</span>, <span class="r">Absent: ${c('att','A')} days</span>${c('att','H')?', <span class="h">Holiday: '+c('att','H')+' days</span>':''}. Homework completed: <span class="g">${c('hw','Y')} Yes</span>, <span class="r">${c('hw','N')} No</span>. Notebook kept at school (subject-wise count): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)}</span>.</p>
  ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topics completed (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} remaining.${x.per.length?'<br>Covered in this period: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
