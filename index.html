@@ -521,7 +521,7 @@ function hwMessage(st){
  if(gd.length){L.push('\u{1F7E2} *GOOD THINGS*');gd.forEach(t=>L.push('\u2705 '+t));L.push('')}
  SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topics completed ('+Math.round(d*100/t)+'%)')});
  if(L[L.length-1]!=='')L.push('');
- L.push('Kindly ensure the homework is completed before the next class and encourage a little revision every day. Please feel free to reach out with any questions.','- '+S.teacher+' (Tuition Teacher)');
+ L.push('Please get the homework done before the next class.','- '+S.teacher+' (Tuition Teacher)');
  return L.join('\n');
 }
 function stats(sid){
