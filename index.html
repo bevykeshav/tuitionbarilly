@@ -212,7 +212,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label><div id="attbox">${attHTML()}</div></div>
- <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<label>Good things: show homework completed for</label>${gtSeg('gtHw')}<label>Good things: show attendance (present days) for</label>${gtSeg('gtAt')}<button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<div class="row" style="gap:8px;margin:10px 0 4px;align-items:flex-end"><div style="flex:1"><span class="fs">Good things: homework</span>${gtSel('gtHw')}</div><div style="flex:1"><span class="fs">Good things: attendance</span>${gtSel('gtAt')}</div></div><button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}<label>\u{1F7E2} Positive note (good things today)</label><textarea data-t="pnote" style="min-height:56px">${esc(r.pnote)}</textarea><label>\u{1F534} Negative note (needs attention)</label><textarea data-t="nnote" style="min-height:56px">${esc(r.nnote)}</textarea></div>
  <div class="fb"><label>Notebook <span class="fs">tap: \u{1F534} at school, \u{1F7E2} with child</span></label><div class="chips" style="flex-wrap:wrap;gap:4px">${SUB().map(sj=>{const v=r['nb_'+sj];return `<button class="chip" data-nb="${esc(sj)}" style="min-height:32px;padding:4px 10px">${esc(sj)}${v==='S'?' \u{1F534}':v==='H'?' \u{1F7E2}':''}</button>`}).join('')}</div></div>
@@ -444,6 +444,7 @@ const MN=['January','February','March','April','May','June','July','August','Sep
 const gt=k=>{const v=S[k];return (v===undefined||v===7)?'w':(v===30?'m':v)};
 function gtDays(v){if(v==='w')return ((new Date(date+'T00:00:00').getDay()+6)%7)+1;if(v==='m')return +date.slice(8);return +v||0}
 function gtLab(v){return v==='w'?'this week':v==='m'?'in '+MN[+date.slice(5,7)-1]:'in the last '+v+' days'}
+function gtSel(k){return `<select data-gt="${k}" style="width:100%;min-height:34px;padding:4px 6px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx);font-size:14px">${[[0,'Off'],[3,'3 days'],['w','This week'],[14,'14 days'],['m',MN[+date.slice(5,7)-1]]].map(([v,l])=>`<option value="${v}"${gt(k)===v?' selected':''}>${l}</option>`).join('')}</select>`}
 function gtSeg(k){return `<div class="seg">${[[0,'Off'],[3,'3 days'],['w','This week'],[14,'14 days'],['m',MN[+date.slice(5,7)-1]]].map(([v,l])=>`<button class="${gt(k)===v?'on':''}" data-gt="${k}" data-gv="${v}">${l}</button>`).join('')}</div>`}
 function recFor(sid,d,live){
  if(live&&sid===sel&&d===date)return dr;
@@ -711,6 +712,7 @@ document.addEventListener('paste',e=>{
 document.addEventListener('change',e=>{
  const t=e.target;
  if(t.id==='dt'&&t.value){if(!okLeave()){draw();return}date=t.value;draw()}
+ else if(t.dataset.gt){const v=t.value;S[t.dataset.gt]=(v==='w'||v==='m')?v:+v;store();draw()}
  else if(t.dataset.pf&&t.files[0]){const kd=t.dataset.pf;shrink(t.files[0]).then(u=>{dph[kd]=u;mark();draw()}).catch(()=>{})}
  else if(t.id==='fr'&&t.value){from=t.value;draw()}
  else if(t.id==='to'&&t.value){to=t.value;draw()}
