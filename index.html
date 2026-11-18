@@ -440,8 +440,11 @@ function grpHw(txt){
  });
  return {groups,other};
 }
-const gt=k=>S[k]===undefined?7:S[k];
-function gtSeg(k){return `<div class="seg">${[[0,'Off'],[3,'3 days'],[7,'7 days'],[14,'14 days'],[30,'30 days']].map(([v,l])=>`<button class="${gt(k)===v?'on':''}" data-gt="${k}" data-gv="${v}">${l}</button>`).join('')}</div>`}
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const gt=k=>{const v=S[k];return (v===undefined||v===7)?'w':(v===30?'m':v)};
+function gtDays(v){if(v==='w')return ((new Date(date+'T00:00:00').getDay()+6)%7)+1;if(v==='m')return +date.slice(8);return +v||0}
+function gtLab(v){return v==='w'?'this week':v==='m'?'in '+MN[+date.slice(5,7)-1]:'in the last '+v+' days'}
+function gtSeg(k){return `<div class="seg">${[[0,'Off'],[3,'3 days'],['w','This week'],[14,'14 days'],['m',MN[+date.slice(5,7)-1]]].map(([v,l])=>`<button class="${gt(k)===v?'on':''}" data-gt="${k}" data-gv="${v}">${l}</button>`).join('')}</div>`}
 function recFor(sid,d,live){
  if(live&&sid===sel&&d===date)return dr;
  return (S.recs[d]||{})[sid]||{};
@@ -482,15 +485,15 @@ function dayFlags(){
 }
 const OK_ATT=0.8,OK_HW=0.7;
 function periodFlags(){
- const bad=[],good=[],nH=gt('gtHw'),nA=gt('gtAt');
+ const bad=[],good=[],vH=gt('gtHw'),vA=gt('gtAt'),nH=gtDays(vH),nA=gtDays(vA),lH=gtLab(vH),lA=gtLab(vA);
  if(nH>0){const c=weekCount(sel,date,true,nH),t=c.hwY+c.hwN;
   if(t>0){const q=c.hwY/t;
-   if(q>=OK_HW&&c.hwY>0)good.push('Homework completed '+c.hwY+' of '+t+' times in the last '+nH+' days');
-   else if(q<OK_HW)bad.push('Homework completed only '+c.hwY+' of '+t+' times in the last '+nH+' days')}}
+   if(q>=OK_HW&&c.hwY>0)good.push('Homework completed '+c.hwY+' of '+t+' times '+lH);
+   else if(q<OK_HW)bad.push('Homework completed only '+c.hwY+' of '+t+' times '+lH)}}
  if(nA>0){const c=weekCount(sel,date,true,nA),t=c.pres+c.abs;
   if(t>0){const q=c.pres/t;
-   if(q>=OK_ATT&&c.pres>0)good.push('Present '+c.pres+' of '+t+' days in the last '+nA+' days');
-   else if(q<OK_ATT)bad.push('Present only '+c.pres+' of '+t+' days in the last '+nA+' days')}}
+   if(q>=OK_ATT&&c.pres>0)good.push('Present '+c.pres+' of '+t+' days '+lA);
+   else if(q<OK_ATT)bad.push('Present only '+c.pres+' of '+t+' days '+lA)}}
  return {bad,good};
 }
 function hwMessage(st){
@@ -649,7 +652,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,et:document.getElementById('ne').value});store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
- else if(d.gt){S[d.gt]=+d.gv;store();draw()}
+ else if(d.gt){S[d.gt]=(d.gv==='w'||d.gv==='m')?d.gv:+d.gv;store();draw()}
  else if(b.id==='alm'){alarmEnd(b)}
  else if(b.id==='mk')mkpdf();
  else if(d.gtt){if(!okLeave())return;tab='stu';ttSel=sel;ttk='';draw();const e=document.getElementById('ttcard');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth'})}
