@@ -215,10 +215,9 @@ function vEntry(){
  <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<label>Good things: show homework completed for</label>${gtSeg('gtHw')}<label>Good things: show attendance (present days) for</label>${gtSeg('gtAt')}<button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}<label>\u{1F7E2} Positive note (good things today)</label><textarea data-t="pnote" style="min-height:56px">${esc(r.pnote)}</textarea><label>\u{1F534} Negative note (needs attention)</label><textarea data-t="nnote" style="min-height:56px">${esc(r.nnote)}</textarea></div>
- <div class="fb"><label>Notebook (which ones are at school)</label>${SUB().map(sj=>`<div class="row"><div>${esc(sj)}</div>${seg(r,'nb_'+sj,[['H','With child'],['S','At school']])}</div>`).join('')}</div>
+ <div class="fb"><label>Notebook <span class="fs">tap: \u{1F534} at school, \u{1F7E2} with child</span></label><div class="chips" style="flex-wrap:wrap;gap:4px">${SUB().map(sj=>{const v=r['nb_'+sj];return `<button class="chip" data-nb="${esc(sj)}" style="min-height:32px;padding:4px 10px">${esc(sj)}${v==='S'?' \u{1F534}':v==='H'?' \u{1F7E2}':''}</button>`}).join('')}</div></div>
  <div class="fb"><label>Test (if taken)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"></div><div class="row"><input data-t="tmk" placeholder="Marks (e.g. 18/20)" value="${esc(r.tmk)}" style="flex:1"></div><div class="seg" style="margin:8px 0"><button class="qb" onclick="setMarks('10/10')" style="flex:1;font-size:0.9em">10/10 ✅</button><button class="qb" onclick="setMarks('15/20')" style="flex:1;font-size:0.9em">15/20</button><button class="qb" onclick="setMarks('18/20')" style="flex:1;font-size:0.9em">18/20</button><button class="qb" onclick="setMarks('20/20')" style="flex:1;font-size:0.9em">20/20 🌟</button></div><div class="seg"><button class="qb" onclick="setMarks('5/10')" style="flex:1;font-size:0.9em">5/10</button><button class="qb" onclick="setMarks('7/10')" style="flex:1;font-size:0.9em">7/10</button><button class="qb" onclick="setMarks('8/10')" style="flex:1;font-size:0.9em">8/10</button><button class="qb" onclick="setMarks('9/10')" style="flex:1;font-size:0.9em">9/10</button></div>${photoUI('ts','Test or marks photo')}</div>
- <div class="fb"><label>Rating</label>${seg(r,'rt',[['Bad','Bad'],['Good','Good'],['Better','Better'],['Best','Best']])}</div>`:''}
- <div class="fb"><label>Note</label><textarea data-t="note">${esc(r.note)}</textarea></div>
+ `:''}
  </div></div>
  <div class="sb"><span id="sv" class="${dirty?'warn':'mu'}">${dirty?'Not saved':'Saved'}</span><button class="pri" id="svb">Save</button></div>`;
 }
@@ -238,18 +237,16 @@ function summaryText(){
  const pl=(n,a,b)=>n+' '+(n===1?a:b);
  const nb=rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0);
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const P=c('att','P'),A=c('att','A'),hy=c('hw','Y'),hn=c('hw','N'),bad=c('rt','Bad'),good=c('rt','Good')+c('rt','Better')+c('rt','Best');
+ const P=c('att','P'),A=c('att','A'),hy=c('hw','Y'),hn=c('hw','N');
  const pos=[],neg=[];
  if(P)pos.push('\u2705 Present: '+pl(P,'day','days'));
  if(hy)pos.push('\u2705 Homework completed: '+pl(hy,'time','times'));
  if(tn&&(ta===null||ta>=40))pos.push('\u2705 Tests: '+tn+' taken'+(ta===null?'':', average '+ta+'%'));
- if(good)pos.push('\u2705 Good performance ratings (Good/Better/Best): '+pl(good,'time','times'));
  if(A)neg.push('\u274C Absent: '+pl(A,'day','days'));
  if(hn){neg.push('\u274C Homework not completed: '+pl(hn,'time','times'));
   rows.filter(x=>x[1].hw==='N'&&x[1].hwnote).slice(0,3).forEach(x=>neg.push('     Reason ('+fmt(x[0]).slice(0,5)+'): '+String(x[1].hwnote).trim().slice(0,60)))}
  if(nb)neg.push('\u274C Notebook was kept at school: '+pl(nb,'time','times'));
  if(tn&&ta!==null&&ta<40)neg.push('\u274C Low test average: '+ta+'%');
- if(bad)neg.push('\u274C Needs improvement (Bad rating): '+pl(bad,'time','times'));
  repFlags(rs,to,false).reverse().forEach(t=>neg.unshift('\u203C\uFE0F *REPEATED: '+t+'*'));
  const L=['\u{1F4CA} *'+st.name+' (Class '+st.cls+') - Progress Report*','\u{1F5D3}\uFE0F '+fmt(from)+' to '+fmt(to),''];
  if(pos.length)L.push('\u{1F31F} *Highlights*',...pos,'');
@@ -461,7 +458,6 @@ function weekCount(sid,endD,live,n){
   if(r.att==='A')c.abs++;
   if(r.att==='P')c.pres++;
   if(SUB().some(x=>r['nb_'+x]==='S'))c.nb++;
-  if(r.rt==='Bad')c.bad++;
   const pc=pct(r);if(pc!==null&&pc<40)c.low++;
  }
  return c;
@@ -471,7 +467,6 @@ function repFlags(sid,endD,live){
  if(c.hwN>=2)a.push('Homework not completed '+c.hwN+' times in the last 7 days');
  if(c.nb>=2)a.push('Notebook kept at school on '+c.nb+' days in the last 7 days');
  if(c.abs>=2)a.push('Absent '+c.abs+' days in the last 7 days');
- if(c.bad>=2)a.push('Bad rating '+c.bad+' times in the last 7 days');
  if(c.low>=2)a.push('Low test marks '+c.low+' times in the last 7 days');
  return a;
 }
@@ -482,7 +477,6 @@ function dayFlags(){
  const nbs=SUB().filter(x=>r['nb_'+x]==='S');
  if(nbs.length)neg.push('Notebook kept at school: '+nbs.join(', '));
  const pc=pct(r);if(pc!==null&&pc<40)neg.push('Low test marks: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
- if(r.rt==='Bad')neg.push('Rating: Bad, needs improvement');
  const nn=String(r.nnote||'').trim();if(nn)neg.push('Note: '+nn);
  return neg;
 }
@@ -519,7 +513,6 @@ function hwMessage(st){
  const gd=[],pn=String(r.pnote||'').trim(),pc=pct(r);
  if(pn)gd.push(pn);
  pf.good.forEach(t=>gd.push(t));
- if(['Good','Better','Best'].includes(r.rt))gd.push('Today\'s rating: '+r.rt);
  if(pc!==null&&pc>=40)gd.push('Test: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
  if(gd.length){L.push('\u{1F7E2} *GOOD THINGS*');gd.forEach(t=>L.push('\u2705 '+t));L.push('')}
  SY().filter(y=>(y.stu||[]).includes(sel)).forEach(y=>{const [d,t]=sylTot(y);if(t)L.push('\u{1F4D8} Syllabus ('+y.name+'): '+d+'/'+t+' topics completed ('+Math.round(d*100/t)+'%)')});
@@ -541,16 +534,16 @@ function build(){
  const L={P:'Present',A:'Absent'},H={Y:'Yes',N:'No'},N={H:'With child',S:'At school'};
  const c=(f,v)=>rows.filter(x=>x[1][f]===v).length;
  const tn=rows.filter(x=>x[1].tsub||x[1].tmk).length,tp=rows.map(x=>pct(x[1])).filter(v=>v!==null),ta=tp.length?Math.round(tp.reduce((a,b)=>a+b,0)/tp.length):null;
- const body=rows.map(([d,r])=>`<tr><td>${dateCell(d)}</td><td>${r.att==='H'?'<span class="h">Holiday</span>':col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework completed: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Not checked yet':'-')}${r.hwnote?'<br>Reason: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${col(r.rt,r.rt!=='Bad')}</td><td>${r.pnote?'<span class="g">+ '+esc(r.pnote)+'</span><br>':''}${r.nnote?'<span class="r">! '+esc(r.nnote)+'</span><br>':''}${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="8">No entries in this period.</td></tr>';
+ const body=rows.map(([d,r])=>`<tr><td>${dateCell(d)}</td><td>${r.att==='H'?'<span class="h">Holiday</span>':col(L[r.att],r.att==='P')}</td><td>${r.hwtext?'Homework: '+hint(r.hwtext)+'<br>':''}${imgH('hw',d)}Homework completed: ${r.hw?col(H[r.hw],r.hw==='Y'):(r.hwtext?'Not checked yet':'-')}${r.hwnote?'<br>Reason: '+hint(r.hwnote):''}</td><td>${(esc(r.work)||(imgH('wk',d)?'':'-'))+imgH('wk',d)}</td><td>${nbCell(r)}</td><td>${(tCell(r)==='-'&&imgH('ts',d)?'':tCell(r))+imgH('ts',d)}</td><td>${r.pnote?'<span class="g">+ '+esc(r.pnote)+'</span><br>':''}${r.nnote?'<span class="r">! '+esc(r.nnote)+'</span><br>':''}${esc(r.note)||''}</td></tr>`).join('')||'<tr><td colspan="7">No entries in this period.</td></tr>';
  return `<div class="rp" id="rp"><h1>Tuition Progress Report</h1>
  <p><b>Name:</b> ${esc(st.name)} &nbsp; <b>Class:</b> ${esc(st.cls)}</p><p><b>Tuition Teacher:</b> ${esc(S.teacher)}</p>
  <p><b>Period:</b> ${fmt(from)} to ${fmt(to)}</p>
  ${(()=>{const a=repFlags(rs,to,false);return a.length?'<div style="border:2px solid #c62828;background:#fdecea;padding:8px;margin:8px 0"><b class="r">REPEATED ISSUES (last 7 days)</b>'+a.map(t=>'<div class="r">\u203C '+esc(t)+'</div>').join('')+'</div>':''})()}
- <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Covered in Class</th><th>Notebook</th><th>Test</th><th>Rating</th><th>Note</th></tr>${body}</table>
+ <table><tr><th>Date</th><th>Attendance</th><th>Home-work</th><th>Covered in Class</th><th>Notebook</th><th>Test</th><th>Note</th></tr>${body}</table>
  <p><b>Summary:</b> <span class="g">Present: ${c('att','P')} days</span>, <span class="r">Absent: ${c('att','A')} days</span>${c('att','H')?', <span class="h">Holiday: '+c('att','H')+' days</span>':''}. Homework completed: <span class="g">${c('hw','Y')} Yes</span>, <span class="r">${c('hw','N')} No</span>. Notebook kept at school (subject-wise count): <span class="r">${rows.reduce((n,x)=>n+SUB().filter(s=>x[1]['nb_'+s]==='S').length,0)}</span>.</p>
  ${sylInfo(rs).map(x=>`<p><b>Syllabus (${esc(x.n)}):</b> ${x.d}/${x.t} topics completed (${Math.round(x.d*100/x.t)}%), ${x.t-x.d} remaining.${x.per.length?'<br>Covered in this period: '+esc(x.per.slice(0,6).join('; '))+(x.per.length>6?' ...':''):''}</p>`).join('')}
  <p>Tests taken: ${tn}${ta===null?'':', average '}${ta===null?'':`<span class="${ta>=40?'g':'r'}">${ta}%</span>`}</p>
- <p>Rating: <span class="r">Bad ${c('rt','Bad')}</span>, <span class="g">Good ${c('rt','Good')}, Better ${c('rt','Better')}, Best ${c('rt','Best')}</span></p></div>`;
+ </div>`;
 }
 function vRep(){
  if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
@@ -648,6 +641,7 @@ document.addEventListener('click',async e=>{
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
  else if(d.ph){dph[d.ph]=null;mark();draw()}
+ else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
