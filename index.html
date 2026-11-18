@@ -199,6 +199,13 @@ function refreshAtt(){
  const a=document.getElementById('attbox');if(a)a.innerHTML=attHTML();
  const h=document.getElementById('hwb');if(h)h.innerHTML=hwBanner();
 }
+const noteType=()=>dr.ntp||(String(dr.nnote||'').trim()?'N':'P');
+function setNote(txt){const ty=noteType();if(ty==='N'){dr.nnote=txt;dr.pnote=''}else{dr.pnote=txt;dr.nnote=''}dr.ntp=ty;mark()}
+function noteBox(){
+ const t=noteType(),txt=t==='N'?dr.nnote:dr.pnote;
+ const bt=(v,l,on,css)=>`<button class="chip" data-nt="${v}" style="min-height:30px;padding:2px 10px;font-size:13px;${on?css:''}">${l}</button>`;
+ return `<div class="row" style="margin:12px 0 6px"><div style="color:var(--mu);font-size:14px">Note</div>${bt('P','\u{1F7E2} Good',t==='P','background:var(--ac);color:var(--on);border-color:var(--ac)')}${bt('N','\u{1F534} Needs attention',t==='N','background:#d9433f;color:#fff;border-color:#d9433f')}</div><textarea data-nt-text style="min-height:56px">${esc(txt)}</textarea>`;
+}
 function vEntry(){
  if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
@@ -214,7 +221,7 @@ function vEntry(){
  <div class="fb"><label>Attendance</label><div id="attbox">${attHTML()}</div></div>
  <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<div class="row" style="gap:8px;margin:10px 0 4px;align-items:flex-end"><div style="flex:1"><span class="fs">Good things: homework</span>${gtSel('gtHw')}</div><div style="flex:1"><span class="fs">Good things: attendance</span>${gtSel('gtAt')}</div></div><button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
- ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}<label>\u{1F7E2} Positive note (good things today)</label><textarea data-t="pnote" style="min-height:56px">${esc(r.pnote)}</textarea><label>\u{1F534} Negative note (needs attention)</label><textarea data-t="nnote" style="min-height:56px">${esc(r.nnote)}</textarea></div>
+ ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}${noteBox()}</div>
  <div class="fb"><label>Notebook <span class="fs">tap: \u{1F534} at school, \u{1F7E2} with child</span></label><div class="chips" style="flex-wrap:wrap;gap:4px">${SUB().map(sj=>{const v=r['nb_'+sj];return `<button class="chip" data-nb="${esc(sj)}" style="min-height:32px;padding:4px 10px">${esc(sj)}${v==='S'?' \u{1F534}':v==='H'?' \u{1F7E2}':''}</button>`}).join('')}</div></div>
  <div class="fb"><label>Test (if taken)</label><div class="row"><input data-t="tsub" placeholder="Subject / topic" value="${esc(r.tsub)}"></div><div class="row"><input data-t="tmk" placeholder="Marks (e.g. 18/20)" value="${esc(r.tmk)}" style="flex:1"></div><div class="seg" style="margin:8px 0"><button class="qb" onclick="setMarks('10/10')" style="flex:1;font-size:0.9em">10/10 ✅</button><button class="qb" onclick="setMarks('15/20')" style="flex:1;font-size:0.9em">15/20</button><button class="qb" onclick="setMarks('18/20')" style="flex:1;font-size:0.9em">18/20</button><button class="qb" onclick="setMarks('20/20')" style="flex:1;font-size:0.9em">20/20 🌟</button></div><div class="seg"><button class="qb" onclick="setMarks('5/10')" style="flex:1;font-size:0.9em">5/10</button><button class="qb" onclick="setMarks('7/10')" style="flex:1;font-size:0.9em">7/10</button><button class="qb" onclick="setMarks('8/10')" style="flex:1;font-size:0.9em">8/10</button><button class="qb" onclick="setMarks('9/10')" style="flex:1;font-size:0.9em">9/10</button></div>${photoUI('ts','Test or marks photo')}</div>
  `:''}
@@ -652,6 +659,7 @@ document.addEventListener('click',async e=>{
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
  else if(d.ph){dph[d.ph]=null;mark();draw()}
+ else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
@@ -704,6 +712,7 @@ document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.t){setF(t.dataset.t,t.value,false);if(t.dataset.t==='hwtext')refreshAtt()}
  else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
+ else if(t.dataset.ntText!==undefined){setNote(t.value)}
 });
 document.addEventListener('paste',e=>{
  const t=e.target;
@@ -712,6 +721,7 @@ document.addEventListener('paste',e=>{
   const text=e.clipboardData.getData('text/plain');
   if(t.dataset.t){setF(t.dataset.t,text,false);draw()}
   else if(t.dataset.rn!==undefined){dhn=text;mark();draw()}
+  else if(t.dataset.ntText!==undefined){setNote(text);draw()}
   else if(t.dataset.sxe!==undefined){t.value=text;mark();draw()}
   else t.value=text;
  }
