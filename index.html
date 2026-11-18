@@ -455,7 +455,7 @@ function recFor(sid,d,live){
 }
 function weekCount(sid,endD,live,n){
  n=n||7;
- const c={hwN:0,hwY:0,nb:0,abs:0,pres:0,bad:0,low:0};
+ const c={hwN:0,hwY:0,nb:0,abs:0,pres:0,hol:0,bad:0,low:0};
  const e=new Date(endD+'T00:00:00'),p0=(live&&sid===sel)?prevHw(sel,date):null;
  for(let i=0;i<n;i++){
   const d=iso(new Date(e.getTime()-i*864e5)),r=recFor(sid,d,live);
@@ -464,6 +464,7 @@ function weekCount(sid,endD,live,n){
   if(hw==='Y')c.hwY++;
   if(r.att==='A')c.abs++;
   if(r.att==='P')c.pres++;
+  if(r.att==='H'||(!r.att&&isSun(d)))c.hol++;
   if(SUB().some(x=>r['nb_'+x]==='S'))c.nb++;
   const pc=pct(r);if(pc!==null&&pc<40)c.low++;
  }
@@ -496,8 +497,8 @@ function periodFlags(){
    else if(q<OK_HW)bad.push('Homework completed only '+c.hwY+' of '+t+' times '+lH)}}
  if(nA>0){const c=weekCount(sel,date,true,nA),t=c.pres+c.abs;
   if(t>0){const q=c.pres/t;
-   if(q>=OK_ATT&&c.pres>0)good.push('Present '+c.pres+' of '+t+' days '+lA);
-   else if(q<OK_ATT)bad.push('Present only '+c.pres+' of '+t+' days '+lA)}}
+   if(q>=OK_ATT&&c.pres>0)good.push('Present '+c.pres+' of '+t+' days '+lA+(c.hol?' (Holidays: '+c.hol+')':''));
+   else if(q<OK_ATT)bad.push('Present only '+c.pres+' of '+t+' days '+lA+(c.hol?' (Holidays: '+c.hol+')':''))}}
  return {bad,good};
 }
 function hwMessage(st){
