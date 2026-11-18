@@ -465,13 +465,26 @@ function dayFlags(){
  const nn=String(r.nnote||'').trim();if(nn)neg.push('Note: '+nn);
  return neg;
 }
+const OK_ATT=0.8,OK_HW=0.7;
+function periodFlags(){
+ const bad=[],good=[],nH=gt('gtHw'),nA=gt('gtAt');
+ if(nH>0){const c=weekCount(sel,date,true,nH),t=c.hwY+c.hwN;
+  if(t>0){const q=c.hwY/t;
+   if(q>=OK_HW&&c.hwY>0)good.push('Homework completed '+c.hwY+' of '+t+' times in the last '+nH+' days');
+   else if(q<OK_HW)bad.push('Homework completed only '+c.hwY+' of '+t+' times in the last '+nH+' days')}}
+ if(nA>0){const c=weekCount(sel,date,true,nA),t=c.pres+c.abs;
+  if(t>0){const q=c.pres/t;
+   if(q>=OK_ATT&&c.pres>0)good.push('Present '+c.pres+' of '+t+' days in the last '+nA+' days');
+   else if(q<OK_ATT)bad.push('Present only '+c.pres+' of '+t+' days in the last '+nA+' days')}}
+ return {bad,good};
+}
 function hwMessage(st){
  const r=dr,pv=prevHw(sel,date),L=[];
  L.push('\u{1F4DA} *'+st.name+' (Class '+st.cls+') - Daily Update*','\u{1F5D3}\uFE0F '+DAYN[new Date(date+'T00:00:00').getDay()]+', '+fmt(date));
  if(fest(date))L.push('\u{1F389} '+fest(date));
  const tdy=todaySubs(sel,date);if(tdy.length)L.push('\u{1F4C5} Today\'s timetable: '+tdy.join(', '));
  L.push('');
- const fl=dayFlags(),rp=repFlags(sel,date,true);
+ const pf=periodFlags(),fl=dayFlags().concat(pf.bad),rp=repFlags(sel,date,true).filter(x=>!(pf.bad.some(y=>/^Present only/.test(y))&&/^Absent/.test(x))&&!(pf.bad.some(y=>/^Homework completed only/.test(y))&&/^Homework not completed/.test(x)));
  if(fl.length||rp.length){L.push('\u{1F534} *NEEDS ATTENTION TODAY*');fl.forEach(t=>L.push('\u{1F534} '+t));rp.forEach(t=>L.push('\u203C\uFE0F *REPEATED: '+t+'*'));L.push('')}
  const wl=String(r.work||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
  if(wl.length){L.push('\u2705 *Covered in today\'s class*');wl.forEach(t=>L.push('\u2022 '+t));L.push('')}
@@ -482,10 +495,9 @@ function hwMessage(st){
  g.other.forEach((t,i)=>L.push((g.groups.length?'\u2022 ':(g.other.length>1?(i+1)+'. ':''))+t));
  L.push('');
  if(pv&&dhw==='Y')L.push('\u{1F31F} Previous homework: completed. Well done!','');
- const gd=[],pn=String(r.pnote||'').trim(),pc=pct(r),nH=gt('gtHw'),nA=gt('gtAt');
+ const gd=[],pn=String(r.pnote||'').trim(),pc=pct(r);
  if(pn)gd.push(pn);
- if(nH>0){const wc=weekCount(sel,date,true,nH);if(wc.hwY>0)gd.push('Homework completed '+wc.hwY+(wc.hwY===1?' time':' times')+' in the last '+nH+' days')}
- if(nA>0){const wc=weekCount(sel,date,true,nA);if(wc.pres>0)gd.push('Present '+wc.pres+(wc.pres===1?' day':' days')+' in the last '+nA+' days')}
+ pf.good.forEach(t=>gd.push(t));
  if(['Good','Better','Best'].includes(r.rt))gd.push('Today\'s rating: '+r.rt);
  if(pc!==null&&pc>=40)gd.push('Test: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
  if(gd.length){L.push('\u{1F7E2} *GOOD THINGS*');gd.forEach(t=>L.push('\u2705 '+t));L.push('')}
