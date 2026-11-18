@@ -30,6 +30,7 @@ input,textarea{width:100%;border:1px solid var(--ln);background:var(--bg);border
 textarea{min-height:72px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.grp{display:inline-flex;gap:6px;padding:4px;border:1px solid var(--ln);border-radius:14px;background:var(--soft);flex:none}
 .chip{white-space:nowrap}.chip.done{border-color:var(--ac);background:var(--soft)}
 .chip.on{background:var(--ac)}
 .row{display:flex;gap:8px;align-items:center;margin:6px 0}.row>*:first-child{flex:1}
@@ -180,6 +181,18 @@ if(!MODE)MODE=(screen.width>=900)?'desk':'phone';
 function applyMode(){document.documentElement.classList.toggle('desk',MODE==='desk');const m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content',MODE==='desk'?'width=1100, viewport-fit=cover':'width=device-width, initial-scale=1, viewport-fit=cover');const b=document.getElementById('md');if(b)b.textContent=MODE==='desk'?'Phone mode':'Desktop mode'}
 function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
 function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
+const SEEDG={mahi:'A',ansh:'A',duggu:'B',vaidik:'B',ayush:'C',ayus:'C',simran:'C'};
+function seedGroups(){
+ if(!S.students.length||S.gseed)return;
+ S.gseed=true;let n=0;
+ S.students.forEach(x=>{const g=SEEDG[String(x.name).trim().toLowerCase()];if(g&&!x.bt){x.bt=g;n++}});
+ S.ts=Date.now();persist();if(n)push();
+}
+function grpChips(fn){
+ const keys=[],m={};
+ S.students.forEach(x=>{const k=String(x.bt||'').trim();(m[k]=m[k]||[]).push(x);if(k&&!keys.includes(k))keys.push(k)});
+ return keys.map(k=>`<span class="grp">${m[k].map(fn).join('')}</span>`).join('')+(m['']||[]).map(fn).join('');
+}
 const hasHw=r=>!!String((r&&r.hwtext)||'').trim();
 const autoAtt=(r,d)=>hasHw(r)?'P':(isSun(d)?'H':'A');
 const manualAtt=r=>!!(r.am||(r.att&&!r.aa));
@@ -212,7 +225,7 @@ function vEntry(){
  if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));if(dr.att&&!dr.aa&&!dr.am)dr.am=1;const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
  if(!dr.am){dr.att=autoAtt(dr,date);dr.aa=1}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
- const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`).join('');
+ const chips=grpChips(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`);
  const full=r.am?(r.att!=='A'&&r.att!=='H'):true;
  return `<div id="hwb">${hwBanner()}</div><input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${(st.et||S.endTime)?' ('+esc(st.et||S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
@@ -566,7 +579,7 @@ function build(){
 function vRep(){
  if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===rs))rs=S.students[0].id;
- const chips=S.students.map(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`).join('');
+ const chips=grpChips(s=>`<button class="chip ${s.id===rs?'on':''}" data-rs="${s.id}">${esc(s.name)}</button>`);
  return `<div class="chips">${chips}</div><div class="c"><div class="seg"><button data-q="w">Last 7 days</button><button data-q="m">This month</button></div>
  <div class="row"><div><label>From</label><input type="date" id="fr" value="${from}"></div><div><label>To</label><input type="date" id="to" value="${to}"></div></div>
  <button class="pri" id="mk">Create PDF and Share</button><p class="mu" id="ms">${esc(msg)}</p>
@@ -575,15 +588,16 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Tuition end time</label><input type="time" data-ee value="${esc(s.et||'')}"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.et?' | ends '+esc(s.et):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Tuition end time</label><input type="time" data-ee value="${esc(s.et||'')}"><label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.et?' | ends '+esc(s.et):''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div>`).join('')||'<p class="mu">No students yet.</p>';
  return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Default tuition end time (used only if a student has no time)</label><input type="time" data-end value="${esc(S.endTime||'')}"><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
- <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Tuition end time</label><input type="time" id="ne"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
+ <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Tuition end time</label><input type="time" id="ne"><label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
  <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data is stored in this device's browser. Take a backup before changing devices.</p><button id="bk">Save Backup</button><label>Restore Backup</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
+ seedGroups();
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():tab==='syl'?vSyl():vStu();
  if(tab==='entry'&&sel)ensure(KP.map(kd=>pkk(date,sel,kd)));
@@ -665,7 +679,7 @@ document.addEventListener('click',async e=>{
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,et:document.getElementById('ne').value});store();draw()}}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,et:document.getElementById('ne').value,bt:document.getElementById('ng').value.trim()});store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(d.gt){S[d.gt]=(d.gv==='w'||d.gv==='m')?d.gv:+d.gv;store();draw()}
@@ -699,7 +713,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
- else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.et=document.querySelector('[data-ee]').value;store()}editId=null;draw()}
+ else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.et=document.querySelector('[data-ee]').value;st.bt=document.querySelector('[data-eg]').value.trim();store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);waOpen(st,summaryText())}
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
