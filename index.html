@@ -167,6 +167,7 @@ function setMarks(marks){dr.tmk=marks;mark();draw()}
 function okLeave(){if(!dirty)return true;if(confirm('You have unsaved changes. Leave without saving?')){dirty=false;dk='';ttk='';if(sylSel){const o=SY().find(x=>x.id===sylSel);sd=o?JSON.parse(JSON.stringify(o)):null}return true}return false}
 function doSave(){
  if((dr.hwtext||'').trim()){if(!dr.hwat)dr.hwat=Date.now()}else{delete dr.hwat;delete dr.hwsent}
+ if(!dr.am){dr.att=autoAtt(dr,date);dr.aa=1}
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
  store();
@@ -179,18 +180,38 @@ if(!MODE)MODE=(screen.width>=900)?'desk':'phone';
 function applyMode(){document.documentElement.classList.toggle('desk',MODE==='desk');const m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content',MODE==='desk'?'width=1100, viewport-fit=cover':'width=device-width, initial-scale=1, viewport-fit=cover');const b=document.getElementById('md');if(b)b.textContent=MODE==='desk'?'Phone mode':'Desktop mode'}
 function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
 function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
+const hasHw=r=>!!String((r&&r.hwtext)||'').trim();
+const autoAtt=(r,d)=>hasHw(r)?'P':(isSun(d)?'H':'A');
+const manualAtt=r=>!!(r.am||(r.att&&!r.aa));
+function attHTML(){
+ const r=dr,lab={P:'Present',A:'Absent',H:'Holiday'};
+ const note=r.am?'Manual. Tap the selected button again to go back to auto.':'Auto: '+lab[r.att]+(r.att==='P'?' (homework given)':r.att==='H'?' (Sunday)':' (no homework given)');
+ return seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])+`<p class="mu" style="margin:4px 0 0">${note}</p>`;
+}
+function hwBanner(){
+ if(date!==iso(new Date())||isSun(date))return '';
+ const miss=S.students.filter(s=>{const r=s.id===sel?dr:R(date,s.id);if(hasHw(r))return false;if(manualAtt(r)&&(r.att==='A'||r.att==='H'))return false;return true});
+ if(!miss.length)return '';
+ return `<div class="pbx"><b>\u26A0\uFE0F Homework not given today:</b> ${miss.map(x=>esc(x.name)).join(', ')}</div>`;
+}
+function refreshAtt(){
+ if(!dr.am){dr.att=autoAtt(dr,date);dr.aa=1}
+ const a=document.getElementById('attbox');if(a)a.innerHTML=attHTML();
+ const h=document.getElementById('hwb');if(h)h.innerHTML=hwBanner();
+}
 function vEntry(){
  if(!S.students.length)return '<div class="c">First add students in the "Students" tab.</div>';
  if(!S.students.find(s=>s.id===sel))sel=S.students[0].id;
- if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));if(isSun(date)&&!dr.att)dr.att='H';const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
+ if(dk!==date+'|'+sel){dk=date+'|'+sel;dr=JSON.parse(JSON.stringify(R(date,sel)));if(dr.att&&!dr.aa&&!dr.am)dr.am=1;const p0=prevHw(sel,date);dhw=p0?(R(p0,sel).hw||''):undefined;dhn=p0?(R(p0,sel).hwnote||''):'';dph={};dirty=false;qSub='';wSub=''}
+ if(!dr.am){dr.att=autoAtt(dr,date);dr.aa=1}
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=S.students.map(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`).join('');
- const full=r.att!=='A'&&r.att!=='H';
- return `<input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${(st.et||S.endTime)?' ('+esc(st.et||S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
+ const full=r.am?(r.att!=='A'&&r.att!=='H'):true;
+ return `<div id="hwb">${hwBanner()}</div><input type="date" id="dt" value="${date}">${dateInfo(date)}<button class="sm" id="alm" style="width:100%;margin-bottom:8px">\u23F0 Alarm: 5 min before tuition ends${(st.et||S.endTime)?' ('+esc(st.et||S.endTime)+')':''}</button><div class="chips">${chips}</div>${ttBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
- <div class="fb"><label>Attendance</label>${seg(r,'att',[['P','Present'],['A','Absent'],['H','Holiday']])}</div>
+ <div class="fb"><label>Attendance</label><div id="attbox">${attHTML()}</div></div>
  <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<label>Good things: show homework completed for</label>${gtSeg('gtHw')}<label>Good things: show attendance (present days) for</label>${gtSeg('gtAt')}<button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}<label>\u{1F7E2} Positive note (good things today)</label><textarea data-t="pnote" style="min-height:56px">${esc(r.pnote)}</textarea><label>\u{1F534} Negative note (needs attention)</label><textarea data-t="nnote" style="min-height:56px">${esc(r.nnote)}</textarea></div>
@@ -627,6 +648,7 @@ document.addEventListener('click',async e=>{
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
  else if(d.ph){dph[d.ph]=null;mark();draw()}
+ else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
@@ -675,7 +697,7 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('input',e=>{
  const t=e.target;
- if(t.dataset.t){setF(t.dataset.t,t.value,false)}
+ if(t.dataset.t){setF(t.dataset.t,t.value,false);if(t.dataset.t==='hwtext')refreshAtt()}
  else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
 });
 document.addEventListener('paste',e=>{
