@@ -182,7 +182,7 @@ function draw(){
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
   <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2QX9A" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
-  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  const cdi=$('cd');if(cdi)cdi.onkeydown=e=>{if(e.key==='Enter')$('go').click()};const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
   return;
  }
  const ms=months();if(!month||!ms.includes(month))month=ms[0];
