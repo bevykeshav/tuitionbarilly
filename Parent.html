@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuition Record</title>
+<meta name="theme-color" content="#1f5f4a">
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mu:#6b6a65;--ac:#1f5f4a;--on:#fff;--ln:#dedbd2;--soft:#e3efe9;--g:#0a7a2f;--r:#c62828;--b:#1565c0;--gs:#e6f4ea;--rs:#fdecea;--bs:#e8f0fb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#161715;--card:#222320;--tx:#efeee9;--mu:#9d9b93;--ac:#5cb592;--on:#10201a;--ln:#383a35;--soft:#25352e;--g:#5cb592;--r:#ef7b78;--b:#7ab3ef;--gs:#1f3329;--rs:#3a2423;--bs:#202c3d}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:0 12px 40px}
+button,input,select{font:inherit;color:var(--tx)}
+button{border:1px solid var(--ln);background:var(--card);border-radius:10px;padding:8px 12px;min-height:40px}
+button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
+input,select{width:100%;border:1px solid var(--ln);background:var(--bg);border-radius:10px;padding:10px}
+.hd{padding:14px 0 6px}
+.hd h1{margin:0;font-size:22px}
+.mu{color:var(--mu);font-size:14px}
+.fs{font-size:12px;color:var(--mu)}
+.tabs{display:flex;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:5}
+.tabs button{flex:1;font-size:14px;padding:8px 2px}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px 14px;margin:10px 0}
+.c h2{margin:0 0 6px;font-size:17px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid .c{margin:0}
+.big{font-size:26px;font-weight:700;line-height:1.1}
+.g{color:var(--g)}.r{color:var(--r)}.b{color:var(--b)}
+.bx{border-radius:12px;padding:10px 12px;margin:10px 0}
+.bx.r{background:var(--rs);border:1px solid var(--r);color:var(--tx)}
+.bx.g{background:var(--gs);border:1px solid var(--g);color:var(--tx)}
+.bx.b{background:var(--bs);border:1px solid var(--b);color:var(--tx)}
+.bx b{display:block;margin-bottom:4px}
+.bx div{margin:2px 0}
+.bar{height:10px;border-radius:6px;background:var(--ln);overflow:hidden;margin:6px 0}.bar>i{display:block;height:100%;background:var(--ac)}
+.badge{display:inline-block;border-radius:8px;padding:2px 8px;font-size:13px;font-weight:600}
+.badge.g{background:var(--gs);color:var(--g)}.badge.r{background:var(--rs);color:var(--r)}.badge.b{background:var(--bs);color:var(--b)}
+.row{display:flex;gap:8px;margin:4px 0;align-items:flex-start}
+.row .k{flex:none;width:92px;color:var(--mu);font-size:14px}
+.row .v{flex:1;white-space:pre-wrap;word-break:break-word}
+.day{padding:10px 12px}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.chip{display:inline-block;border:1px solid var(--ln);border-radius:12px;padding:1px 9px;margin:2px 4px 2px 0;font-size:13px}
+.chip.r{border-color:var(--r);color:var(--r)}
+details{margin:4px 0}summary{cursor:pointer;padding:4px 0}
+.ft{text-align:center;margin-top:16px}
+</style></head><body>
+<div id="app"></div>
+<script>
+const URL_='https://script.google.com/macros/s/AKfycbzVTdVBoJtSjvCiQPbuLv6ovyJBH2QJm47WFXxXgv5O10dR4v6A5r16iWCiOIN1fRiYoQ/exec';
+const $=id=>document.getElementById(id);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fmt=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const dayName=d=>DN[new Date(d+'T00:00:00').getDay()];
+const isSun=d=>new Date(d+'T00:00:00').getDay()===0;
+const ddiff=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+const FX={'01-01':'New Year','01-14':'Makar Sankranti / Pongal','01-26':'Republic Day','04-14':'Ambedkar Jayanti','08-15':'Independence Day','09-05':"Teachers' Day",'10-02':'Gandhi Jayanti','11-14':"Children's Day",'12-25':'Christmas'};
+const FV={'2026-11-06':'Dhanteras','2026-11-07':'Choti Diwali','2026-11-08':'Diwali','2026-11-09':'Govardhan Puja','2026-11-11':'Bhai Dooj','2026-11-15':'Chhath Puja','2026-11-24':'Guru Nanak Jayanti','2027-02-11':'Vasant Panchami','2027-03-06':'Maha Shivratri','2027-03-10':'Eid-ul-Fitr','2027-03-22':'Holi','2027-04-15':'Ram Navami','2027-08-17':'Raksha Bandhan','2027-08-25':'Janmashtami','2027-09-04':'Ganesh Chaturthi','2027-10-19':'Dussehra','2027-10-29':'Diwali'};
+const fest=d=>(D&&D.hol&&D.hol[d])||FV[d]||FX[d.slice(5)]||'';
+const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return m&&+m[2]>0?+m[1]/+m[2]*100:null};
+const nbS=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='S').map(k=>k.slice(3));
+const nbH=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='H').map(k=>k.slice(3));
+
+let D=null,code='',tab='ov',month='',note='',loading=false;
+try{code=localStorage.getItem('pa_code')||''}catch(e){}
+const q=new URLSearchParams(location.search).get('c');
+if(q){code=q.trim();try{localStorage.setItem('pa_code',code)}catch(e){}try{history.replaceState(null,'',location.pathname)}catch(e){}}
+try{const c=localStorage.getItem('pa_data');if(c&&code)D=JSON.parse(c)}catch(e){}
+
+async function load(){
+ if(!code){draw();return}
+ loading=true;note='';draw();
+ try{
+  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'parent',c:code})}).then(x=>x.json());
+  if(r&&r.ok){D=r;try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}note=''}
+  else if(r&&r.error==='bad'){D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}note='This code is not correct. Please check the link sent by the teacher.'}
+  else note='Could not load right now. Please try again.';
+ }catch(e){note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
+ loading=false;draw();
+}
+function todayIso(){return iso(new Date())}
+function months(){
+ const set={};set[todayIso().slice(0,7)]=1;
+ Object.keys(D.recs||{}).forEach(d=>set[d.slice(0,7)]=1);
+ return Object.keys(set).sort().reverse();
+}
+const mlabel=m=>MN[+m.slice(5,7)-1]+' '+m.slice(0,4);
+function stats(m){
+ const s={P:0,A:0,H:0,hy:0,hn:0,nb:0,tn:0,ts:[]};
+ const y=+m.slice(0,4),mo=+m.slice(5,7),n=new Date(y,mo,0).getDate(),td=todayIso();
+ for(let i=1;i<=n;i++){
+  const d=m+'-'+String(i).padStart(2,'0');if(d>td)break;
+  const r=D.recs[d]||{};
+  if(r.att==='P')s.P++;else if(r.att==='A')s.A++;else if(r.att==='H'||(!r.att&&isSun(d)))s.H++;
+  if(r.hw==='Y')s.hy++;if(r.hw==='N')s.hn++;
+  if(nbS(r).length)s.nb++;
+  if(r.tsub||r.tmk){s.tn++;const p=pct(r);if(p!==null)s.ts.push(p)}
+ }
+ return s;
+}
+function recent(n){
+ const out=[],td=todayIso();
+ Object.keys(D.recs).sort().reverse().forEach(d=>{if(d<=td&&ddiff(d,td)<n)out.push(d)});
+ return out;
+}
+function attBadge(r,d){
+ if(r.att==='P')return '<span class="badge g">Present</span>';
+ if(r.att==='A')return '<span class="badge r">Absent</span>';
+ if(r.att==='H'||isSun(d))return '<span class="badge b">Holiday</span>';
+ return '';
+}
+function ovTab(){
+ const s=stats(month),hw=s.hy+s.hn,hp=hw?Math.round(s.hy*100/hw):null,ta=s.ts.length?Math.round(s.ts.reduce((a,b)=>a+b,0)/s.ts.length):null;
+ const bad=[],good=[];
+ recent(7).forEach(d=>{
+  const r=D.recs[d],l=dayName(d).slice(0,3)+' '+fmt(d).slice(0,5);
+  if(r.att==='A')bad.push(l+': Absent');
+  if(r.hw==='N')bad.push(l+': Homework not completed'+(r.hwnote?' ('+esc(r.hwnote)+')':''));
+  if(nbS(r).length)bad.push(l+': Notebook kept at school ('+esc(nbS(r).join(', '))+')');
+  const p=pct(r);
+  if(p!==null&&p<40)bad.push(l+': Low marks in '+esc(r.tsub||'test')+' ('+esc(r.tmk)+')');
+  if(p!==null&&p>=40)good.push(l+': '+esc(r.tsub||'Test')+' '+esc(r.tmk));
+  if(r.nnote)bad.push(l+': '+esc(r.nnote));
+  if(r.pnote)good.push(l+': '+esc(r.pnote));
+ });
+ const ex=upcoming(7).slice(0,4);
+ return `
+ <div class="grid">
+  <div class="c"><div class="mu">Present</div><div class="big g">${s.P}</div><div class="fs">days</div></div>
+  <div class="c"><div class="mu">Absent</div><div class="big ${s.A?'r':''}">${s.A}</div><div class="fs">days${s.H?' | Holidays: '+s.H:''}</div></div>
+  <div class="c"><div class="mu">Homework completed</div><div class="big ${hp===null?'':hp>=70?'g':'r'}">${hp===null?'-':hp+'%'}</div><div class="fs">${s.hy} of ${hw} times</div></div>
+  <div class="c"><div class="mu">Tests</div><div class="big ${ta===null?'':ta>=40?'g':'r'}">${ta===null?'-':ta+'%'}</div><div class="fs">${s.tn} taken (average)</div></div>
+ </div>
+ ${s.nb?`<div class="c"><span class="r"><b>Notebook kept at school:</b></span> ${s.nb} day${s.nb===1?'':'s'} in ${esc(mlabel(month))}</div>`:''}
+ ${ex.length?`<div class="bx b"><b>\u{1F4DD} Upcoming exams</b>${ex.map(e=>`<div>${exLabel(e.d)}: ${esc(e.s)}</div>`).join('')}</div>`:''}
+ ${bad.length?`<div class="bx r"><b>\u{1F534} Needs attention (last 7 days)</b>${bad.map(t=>`<div>\u{1F534} ${t}</div>`).join('')}</div>`:''}
+ ${good.length?`<div class="bx g"><b>\u{1F7E2} Good things (last 7 days)</b>${good.map(t=>`<div>\u2705 ${t}</div>`).join('')}</div>`:''}
+ ${!bad.length&&!good.length?'<div class="c mu">No records in the last 7 days.</div>':''}`;
+}
+function dayTab(){
+ const days=Object.keys(D.recs).filter(d=>d.slice(0,7)===month).sort().reverse();
+ if(!days.length)return '<div class="c mu">No records in this month.</div>';
+ return days.map(d=>{
+  const r=D.recs[d],f=fest(d),s=nbS(r),h=nbH(r),p=pct(r);
+  return `<div class="c day"><div class="dh"><div><b>${fmt(d).slice(0,5)}</b> <span class="mu">${dayName(d)}</span>${f?` <span class="fs">\u{1F389} ${esc(f)}</span>`:''}</div>${attBadge(r,d)}</div>
+  ${r.work?`<div class="row"><div class="k">Covered in class</div><div class="v">${esc(r.work)}</div></div>`:''}
+  ${r.hwtext?`<div class="row"><div class="k">Homework</div><div class="v">${esc(r.hwtext)}</div></div>
+  <div class="row"><div class="k">Homework done?</div><div class="v">${r.hw==='Y'?'<span class="badge g">Completed</span>':r.hw==='N'?'<span class="badge r">Not completed</span>'+(r.hwnote?' '+esc(r.hwnote):''):'<span class="mu">Not checked yet</span>'}</div></div>`:''}
+  ${s.length||h.length?`<div class="row"><div class="k">Notebook</div><div class="v">${s.map(x=>`<span class="chip r">${esc(x)}: at school</span>`).join('')}${h.map(x=>`<span class="chip">${esc(x)}: with child</span>`).join('')}</div></div>`:''}
+  ${r.tsub||r.tmk?`<div class="row"><div class="k">Test</div><div class="v">${esc(r.tsub||'')} <b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>`:''}
+  ${r.pnote?`<div class="bx g" style="margin:6px 0 0">\u{1F7E2} ${esc(r.pnote)}</div>`:''}
+  ${r.nnote?`<div class="bx r" style="margin:6px 0 0">\u{1F534} ${esc(r.nnote)}</div>`:''}
+  ${r.note?`<div class="row"><div class="k">Note</div><div class="v">${esc(r.note)}</div></div>`:''}
+  </div>`}).join('');
+}
+function testTab(){
+ const t=[];Object.keys(D.recs).sort().reverse().forEach(d=>{const r=D.recs[d];if(r.tsub||r.tmk)t.push([d,r])});
+ if(!t.length)return '<div class="c mu">No tests yet.</div>';
+ const ps=t.map(x=>pct(x[1])).filter(v=>v!==null),a=ps.length?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null;
+ return `${a===null?'':`<div class="c"><span class="mu">Overall test average</span> <span class="big ${a>=40?'g':'r'}">${a}%</span></div>`}
+ <div class="c">${t.map(([d,r])=>{const p=pct(r);return `<div class="row"><div class="k">${fmt(d).slice(0,5)}</div><div class="v">${esc(r.tsub||'Test')}</div><div><b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>`}).join('')}</div>`;
+}
+function exLabel(d){const k=ddiff(todayIso(),d);return k===0?'<b class="r">Today</b>':k===1?'<b>Tomorrow</b>':dayName(d).slice(0,3)+' '+fmt(d).slice(0,5)}
+function allExams(){const a=[];(D.ds||[]).forEach(x=>(x.rows||[]).forEach(r=>a.push({d:r.d,s:r.s,n:x.name})));return a.sort((p,q)=>p.d<q.d?-1:p.d>q.d?1:0)}
+function upcoming(n){const t=todayIso();return allExams().filter(e=>{const k=ddiff(t,e.d);return k>=0&&k<=n})}
+function exTab(){
+ const t=todayIso(),ex=allExams().filter(e=>e.d>=t),past=allExams().filter(e=>e.d<t).reverse();
+ const syl=(D.syl||[]).map(y=>{
+  let d=0,tt=0;y.subs.forEach(sb=>sb.items.forEach(i=>{tt++;if(i.d)d++}));
+  const pc=tt?Math.round(d*100/tt):0;
+  return `<div class="c"><h2>${esc(y.name)}</h2><b>${d} of ${tt} topics done (${pc}%)</b><div class="bar"><i style="width:${pc}%"></i></div>
+  ${y.subs.map(sb=>{const sd=sb.items.filter(i=>i.d).length;return `<details><summary>${esc(sb.n)} <span class="mu">${sd}/${sb.items.length}</span></summary>${sb.items.map(i=>`<div class="row"><div class="v" style="${i.d?'opacity:.6;text-decoration:line-through':''}">${esc(i.t)}</div><div class="fs" style="flex:none">${i.d?'\u2705 '+fmt(i.d).slice(0,5):'Pending'}</div></div>`).join('')}</details>`}).join('')}</div>`;
+ }).join('');
+ return `<div class="c"><h2>Date sheet</h2>${ex.length?ex.map(e=>`<div class="row"><div class="k">${exLabel(e.d)}</div><div class="v">${esc(e.s)}${e.n?` <span class="fs">(${esc(e.n)})</span>`:''}</div></div>`).join(''):'<div class="mu">No upcoming exams.</div>'}
+ ${past.length?`<details><summary class="mu">Past exams (${past.length})</summary>${past.map(e=>`<div class="row" style="opacity:.6"><div class="k">${fmt(e.d).slice(0,5)}</div><div class="v">${esc(e.s)}</div></div>`).join('')}</details>`:''}</div>
+ <h2 style="margin:16px 0 0;font-size:17px">Syllabus progress</h2>${syl||'<div class="c mu">No syllabus added yet.</div>'}`;
+}
+function draw(){
+ const el=$('app');
+ if(!code||!D){
+  el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
+  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2QX9A" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
+  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  return;
+ }
+ const ms=months();if(!month||!ms.includes(month))month=ms[0];
+ const upd=D.ts?new Date(D.ts):null,u=upd?String(upd.getDate()).padStart(2,'0')+'/'+String(upd.getMonth()+1).padStart(2,'0')+' '+String(upd.getHours()).padStart(2,'0')+':'+String(upd.getMinutes()).padStart(2,'0'):'';
+ const body=tab==='ov'?ovTab():tab==='day'?dayTab():tab==='test'?testTab():exTab();
+ el.innerHTML=`<div class="hd"><h1>${esc(D.student.name)}</h1><div class="mu">Class ${esc(D.student.cls)}${D.teacher?' | Teacher: '+esc(D.teacher):''}</div>${u?`<div class="fs">Updated ${u}</div>`:''}</div>
+ ${note?`<div class="bx b">${esc(note)}</div>`:''}
+ <div class="tabs">${[['ov','Overview'],['day','Daily'],['test','Tests'],['ex','Exams']].map(([k,l])=>`<button class="${tab===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>
+ ${tab==='ov'||tab==='day'?`<select id="mon">${ms.map(m=>`<option value="${m}"${m===month?' selected':''}>${esc(mlabel(m))}</option>`).join('')}</select>`:''}
+ ${body}
+ <div class="ft"><button id="rf">${loading?'Loading...':'Refresh'}</button> <button id="lo">Change code</button></div>`;
+ el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw();window.scrollTo(0,0)});
+ const sel=$('mon');if(sel)sel.onchange=()=>{month=sel.value;draw()};
+ $('rf').onclick=load;
+ $('lo').onclick=()=>{code='';D=null;try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}draw()};
+}
+draw();load();
+</script></body></html>
