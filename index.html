@@ -149,7 +149,7 @@ function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
  store();
- for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd);PH[k]=dph[kd];pput(k,dph[kd])}}dph={};
+ for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd),v=dph[kd];PH[k]=v;pput(k,v).then(()=>phQueue(k,v))}}dph={};
  dirty=false;draw();
  const e=document.getElementById('sv');if(e){e.textContent='Saved';e.className='mu'}
 }
@@ -240,6 +240,34 @@ function idb(){return _db||(_db=new Promise((ok,no)=>{try{const q=indexedDB.open
 async function pget(k){const d=await idb();return new Promise(ok=>{const r=d.transaction('p').objectStore('p').get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}
 async function pput(k,v){const d=await idb();return new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=()=>ok(true);t.onerror=()=>ok(false)})}
 const PH={},pk=(d,s)=>d+'|'+s;
+/* ---- photo cloud sync: so the parent app can see photos ---- */
+const phCK=k=>{const p=k.split('|');return p[0]+'|'+p[1]+'|'+(p[2]||'hw')};
+function phQ(){try{return JSON.parse(localStorage.getItem('tms_phq')||'{}')}catch(e){return {}}}
+function phQs(q){try{localStorage.setItem('tms_phq',JSON.stringify(q))}catch(e){}}
+function phQueue(k,v){const q=phQ();q[k]=v?'s':'d';phQs(q);phSync()}
+async function phAllKeys(){const d=await idb();return new Promise(ok=>{const r=d.transaction('p').objectStore('p').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
+let phBusy=false;
+async function phSync(){
+ if(phBusy||!CU||!navigator.onLine)return;phBusy=true;
+ try{
+  let bf='';try{bf=localStorage.getItem('tms_phbf')||''}catch(e){}
+  if(!bf){const ks=await phAllKeys(),q=phQ();ks.forEach(k=>{if(!q[k])q[k]='s'});phQs(q);try{localStorage.setItem('tms_phbf','1')}catch(e){}}
+  for(;;){
+   const q=phQ(),ks=Object.keys(q);if(!ks.length)break;
+   const k=ks[0];let ok=false;
+   try{
+    let r;
+    if(q[k]==='s'){const v=await pget(k);r=v?await call({a:'pset',key:phCK(k),data:v}):{ph:1,ok:true}}
+    else r=await call({a:'pdel',key:phCK(k)});
+    ok=!!(r&&r.ph===1&&(r.ok||r.error==='bad'||r.error==='big'));
+   }catch(e){}
+   if(!ok)break;
+   const q2=phQ();if(q2[k]===q[k])delete q2[k];phQs(q2);
+  }
+ }catch(e){}
+ phBusy=false;
+}
+window.addEventListener('online',()=>phSync());
 async function ensure(keys){let got=false;for(const k of keys){if(!(k in PH)){try{PH[k]=await pget(k)}catch(e){PH[k]=null}if(PH[k])got=true}}if(got)draw()}
 function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=no;im.src=u})}
 function hint(t){const ls=String(t||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);let o=ls.slice(0,2).join('\n'),cut=ls.length>2;if(o.length>70){o=o.slice(0,70).replace(/\s+\S*$/,'');cut=true}return esc(o).replace(/\n/g,'<br>')+(cut?' ...':'')}
@@ -836,6 +864,6 @@ setInterval(updateClock,1000);updateClock();
 setInterval(renderPB,30000);document.addEventListener('visibilitychange',renderPB);
 applyMode();
 draw();
-pull();
+pull().finally(phSync);
 try{if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js')}catch(e){}
 </script></body></html>
