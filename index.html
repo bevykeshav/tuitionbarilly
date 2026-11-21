@@ -203,7 +203,7 @@ function vEntry(){
  const st=S.students.find(s=>s.id===sel),r=dr,pv=prevHw(sel,date);
  const chips=grpChips(s=>`<button class="chip ${s.id===sel?'on':''} ${R(date,s.id).att?'done':''}" data-sel="${s.id}">${esc(s.name)}${isPend(date,s.id)?' <span class="warn">\u25CF</span>':''}</button>`);
  const full=r.am?(r.att!=='A'&&r.att!=='H'):true;
- return `<div id="hwb">${hwBanner()}</div><input type="date" id="dt" value="${date}">${dateInfo(date)}<div class="chips">${chips}</div>${ttBanner()}
+ return `<div id="hwb">${hwBanner()}</div><input type="date" id="dt" value="${date}">${dateInfo(date)}<div class="chips">${chips}</div>${ttBanner()}${examBanner()}
  <div class="c"><h2>${esc(st.name)} <span class="mu">Class ${esc(st.cls)}</span></h2>
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
@@ -399,6 +399,78 @@ function quickHw(kind){
  ${old.length?'<p class="mu" style="margin:8px 0 2px">Already done (for revision)</p>'+old.map(i=>btn(i,'')).join(''):''}
  ${gen}</div>`;
 }
+/* ---- Date sheet (exam schedule) ---- */
+let dsEdit=null,dsEditStu=[],dsNew=null;
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const DSPROMPT=`I am sending you a school date sheet (exam schedule) as a PDF or photo. Convert it to plain text, one line per exam, in exactly this format:
+
+DD/MM/YYYY Subject name
+
+Rules (follow all of them):
+
+1. One exam per line. Always write the full date with the year (DD/MM/YYYY) and then the subject name.
+
+2. Keep the subject spelling exactly as in the date sheet. Write Hindi and Sanskrit in Devanagari. If a subject has a part (for example "English Literature" and "English Grammar"), write the full name.
+
+3. Do not skip any exam. Check all pages. Do not add or correct anything.
+
+4. The school name, class, session and the exam name (UT-2, Half Yearly) are not exams. Do not write them as lines.
+
+5. Do not use emoji, bullets, numbering, tables or extra headings. Do not write the day name.
+
+6. If the date sheet contains several classes, give each class its own code block with the class name above the block.
+
+7. If a word or date is blurred or you are not sure about it, do not guess. Write it as it appears and list it under "Not sure" below.
+
+Reply only in this way:
+- First line: the name to use for the date sheet in the app (for example "Class 3 UT-2").
+- Then the full text in one code block.
+- After the code block, only one line: "Total: X exams". If anything was unclear, add "Not sure:" followed by the list.
+- Write nothing else.`;
+function parseDS(txt){
+ const rows=[];
+ String(txt||'').split(/\r?\n/).forEach(l=>{
+  l=l.trim().replace(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s*[-:\u2013|,]?\s*(?=\d)/i,'');if(!l)return;
+  let y=null,m,d,rest,mm;
+  if(mm=l.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s*[-:\u2013|,]?\s*(.+)$/)){y=+mm[1];m=+mm[2];d=+mm[3];rest=mm[4]}
+  else if(mm=l.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{4}|\d{2})(?!\d))?\s*[-:\u2013|,]?\s*(.+)$/)){d=+mm[1];m=+mm[2];y=mm[3]?+mm[3]:null;rest=mm[4]}
+  else if(mm=l.match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?,?\s*(\d{4})?\s*[-:\u2013|,]?\s*(.+)$/)){d=+mm[1];m=MON[mm[2].toLowerCase()];y=mm[3]?+mm[3]:null;rest=mm[4]}
+  else return;
+  if(!m||m>12||!d||d>31)return;
+  if(y!==null&&y<100)y+=2000;
+  if(!y){const n=new Date();y=n.getFullYear();if(new Date(y,m-1,d)<new Date(n.getTime()-90*864e5))y++}
+  rest=rest.replace(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?\s*[-:\u2013|,]?\s*/i,'').trim();
+  if(!rest||/^[\/.]/.test(rest))return;
+  rows.push({d:y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),s:rest});
+ });
+ return rows.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+}
+const toDSTxt=x=>x.rows.map(r=>fmt(r.d)+' '+r.s).join('\n');
+const ddiff=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+function exams(sid){const a=[];(S.ds||[]).forEach(x=>{if((x.stu||[]).includes(sid))x.rows.forEach(r=>a.push({d:r.d,s:r.s,n:x.name}))});return a.sort((p,q)=>p.d<q.d?-1:p.d>q.d?1:0)}
+const upcomingExams=(sid,d,n)=>exams(sid).filter(e=>{const k=ddiff(d,e.d);return k>=0&&k<=n});
+function exLabel(e,d){const k=ddiff(d,e.d);return k===0?'Today':k===1?'Tomorrow':dayName(e.d).slice(0,3)+' '+fmt(e.d).slice(0,5)}
+function examBanner(){
+ const ex=upcomingExams(sel,date,7).slice(0,5);if(!ex.length)return '';
+ const td=ex.some(e=>e.d===date);
+ return `<div class="c" style="border:2px solid ${td?'#d9433f':'#1565c0'};padding:8px 12px;margin:8px 0"><b>${td?'\u{1F514} Exam today':'\u{1F4DD} Upcoming exams'}</b>${ex.map(e=>`<div class="row" style="margin:2px 0"><div class="${e.d===date?'warn':'mu'}" style="flex:none;min-width:92px">${exLabel(e,date)}</div><div>${esc(e.s)}${e.n?` <span class="fs">(${esc(e.n)})</span>`:''}</div></div>`).join('')}</div>`;
+}
+function dsHTML(){
+ const arr=S.ds||[],td=iso(new Date());
+ const cards=arr.map(x=>{
+  if(dsEdit===x.id)return `<div class="c"><h2>Edit date sheet</h2><label>Name</label><input data-dne value="${esc(x.name)}"><label>Lines (date and subject, one per line)</label><textarea data-dxe style="min-height:150px">${esc(toDSTxt(x))}</textarea><label>Applies to</label><div class="chips" style="flex-wrap:wrap">${stuChips(dsEditStu,'data-dses')}</div><div class="seg" style="margin-top:10px"><button class="on" id="dsapply">Apply</button><button id="dscancel">Cancel</button></div></div>`;
+  return `<div class="c"><h2>${esc(x.name)} <span class="mu">${x.rows.length} exams</span></h2><p class="mu" style="margin:2px 0 6px">Applies to: ${esc(stuNames(x.stu))}</p>${x.rows.map(r=>`<div class="row" style="margin:2px 0;${r.d<td?'opacity:.5':''}"><div class="mu" style="flex:none;width:96px">${fmt(r.d).slice(0,5)} ${dayName(r.d).slice(0,3)}</div><div>${esc(r.s)}</div></div>`).join('')}<div class="seg" style="margin-top:8px"><button data-dse="${x.id}">Edit</button><button data-dsd="${x.id}">${pend==='ds'+x.id?'Confirm delete?':'Delete'}</button></div></div>`;
+ }).join('');
+ const nds=dsNew||S.students.map(x=>x.id);
+ return `${cards}<div class="c"><h2>Add Date Sheet</h2>
+ <p class="mu">1. Send the school date sheet (photo or PDF) to Claude with the prompt below.<br>2. Paste Claude's lines here. Each line is a date and a subject, e.g. 20/11/2026 Hindi.</p>
+ <button id="dsprompt" style="width:100%">Copy prompt for Claude</button>
+ <label>Date sheet name</label><input data-dn placeholder="e.g. Class 3 UT-2">
+ <label>Paste lines here</label><textarea data-dx style="min-height:120px" placeholder="20/11/2026 Hindi&#10;22/11/2026 Maths&#10;24/11/2026 English"></textarea>
+ <label>Applies to</label><div class="chips" style="flex-wrap:wrap">${stuChips(nds,'data-dns')}</div>
+ <button class="pri" id="dsnew" style="margin-top:10px">Add Date Sheet</button><p class="mu" id="dsmsg"></p></div>`;
+}
+/* ---- end date sheet ---- */
 function vSyl(){
  if(sylSel&&sd){
   const [dn,tt]=sylTot(sd),pc=tt?Math.round(dn*100/tt):0;
@@ -419,7 +491,7 @@ function vSyl(){
  const actS=SY().filter(y=>!isDone(y)),doneS=SY().filter(isDone);
  const list=(actS.map(card).join('')||(doneS.length?'<div class="c mu">All syllabus are completed.</div>':'<div class="c mu">No syllabus yet. Add one below.</div>'))+(doneS.length?`<div class="c" style="padding:8px 12px"><p class="mu" style="margin:0 0 4px">\u2705 Completed (${doneS.length})</p>${doneS.map(y=>`<div class="row" style="margin:2px 0"><div class="mu">${esc(y.name)} <span class="fs">${sylTot(y)[1]} topics</span></div><button class="sm" data-sopen="${y.id}">Open</button></div>`).join('')}</div>`:'');
  const ns=newStu||S.students.map(s=>s.id);
- return `${list}<div class="c"><h2>Add New Syllabus</h2>
+ return `${list}${dsHTML()}<div class="c"><h2>Add New Syllabus</h2>
  <p class="mu">1. Give the syllabus PDF to Claude and send the prompt below.<br>2. Paste Claude's text (the code block only) here.<br>3. Check Claude's "Total" line against your PDF.</p>
  <button id="sprompt" style="width:100%">Copy prompt for Claude</button>
  <label>Syllabus name</label><input data-sn placeholder="e.g. Class 3 Half Yearly">
@@ -519,6 +591,8 @@ function hwMessage(st){
  pf.good.forEach(t=>gd.push(t));
  if(pc!==null&&pc>=40)gd.push('Test: '+r.tmk+(r.tsub?' ('+r.tsub+')':''));
  if(gd.length){L.push('\u{1F7E2} *GOOD THINGS*');gd.forEach(t=>L.push('\u2705 '+t));L.push('')}
+ const ex=upcomingExams(sel,date,7);
+ if(ex.length){if(L[L.length-1]!=='')L.push('');L.push('\u{1F4DD} *Exams*');ex.forEach(e=>L.push((e.d===date?'\u{1F514} ':'\u2022 ')+exLabel(e,date)+': '+e.s));L.push('')}
  const sl=SY().filter(y=>(y.stu||[]).includes(sel)).map(y=>({y,dt:sylTot(y)})).filter(x=>x.dt[1]);
  sl.filter(x=>x.dt[0]<x.dt[1]).forEach(x=>L.push('\u{1F4D8} Syllabus ('+x.y.name+'): '+x.dt[0]+'/'+x.dt[1]+' topics completed ('+Math.round(x.dt[0]*100/x.dt[1])+'%)'));
  const sdn=sl.filter(x=>x.dt[0]===x.dt[1]).map(x=>x.y.name);
@@ -649,6 +723,14 @@ document.addEventListener('click',async e=>{
  else if(d.sel){if(!okLeave())return;sel=d.sel;draw()}
  else if(d.rs){rs=d.rs;draw()}
  else if(d.ph){dph[d.ph]=null;mark();draw()}
+ else if(d.dns){b.classList.toggle('on');if(!dsNew)dsNew=S.students.map(x=>x.id);dsNew=dsNew.includes(d.dns)?dsNew.filter(x=>x!==d.dns):[...dsNew,d.dns]}
+ else if(d.dses){b.classList.toggle('on');dsEditStu=dsEditStu.includes(d.dses)?dsEditStu.filter(x=>x!==d.dses):[...dsEditStu,d.dses]}
+ else if(d.dse){const x=(S.ds||[]).find(y=>y.id===d.dse);if(x){dsEdit=x.id;dsEditStu=[...(x.stu||[])];draw()}}
+ else if(d.dsd){if(pend==='ds'+d.dsd){S.ds=(S.ds||[]).filter(y=>y.id!==d.dsd);pend=null;store()}else pend='ds'+d.dsd;draw()}
+ else if(b.id==='dsprompt'){try{await navigator.clipboard.writeText(DSPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
+ else if(b.id==='dsnew'){const nm=document.querySelector('[data-dn]').value.trim(),rows=parseDS(document.querySelector('[data-dx]').value),m=document.getElementById('dsmsg');if(!rows.length){m.textContent='No exam found. Each line must start with a date, e.g. 20/11/2026 Hindi.';return}(S.ds=S.ds||[]).push({id:'d'+Date.now(),name:nm||'Date sheet',stu:dsNew||S.students.map(x=>x.id),rows});dsNew=null;store();draw()}
+ else if(b.id==='dsapply'){const x=(S.ds||[]).find(y=>y.id===dsEdit),rows=parseDS(document.querySelector('[data-dxe]').value);if(x&&rows.length){x.rows=rows;x.name=document.querySelector('[data-dne]').value.trim()||x.name;x.stu=[...dsEditStu];store()}dsEdit=null;draw()}
+ else if(b.id==='dscancel'){dsEdit=null;draw()}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
