@@ -57,7 +57,7 @@ textarea{min-height:72px}
 .rp .g{color:#0a7a2f;font-weight:700}.rp .r{color:#c62828;font-weight:700}.rp .h{color:#1565c0;font-weight:700}
 </style></head><body>
 <div class="tabs"><button data-tab="entry">Today's Entry</button><button data-tab="rep">PDF Report</button><button data-tab="syl">Syllabus</button><button data-tab="stu">Students</button></div>
-<div class="bar"><div><span style="font-weight:600;font-size:18px" id="clk"></span><span class="mu" id="sy" style="margin-left:12px"></span><span class="mu" id="phs" style="margin-left:10px;text-decoration:underline"></span></div><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
+<div class="bar"><div><span style="font-weight:600;font-size:18px" id="clk"></span><span class="mu" id="sy" style="margin-left:12px"></span></div><span><button class="sm" id="ib" style="display:none">Install App</button> <button class="sm" id="md"></button></span></div>
 <div id="pb"></div>
 <div id="v"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -149,7 +149,7 @@ function doSave(){
  const o=S.recs[date]||(S.recs[date]={});o[sel]=JSON.parse(JSON.stringify(dr));
  const p0=prevHw(sel,date);if(p0&&dhw!==undefined){S.recs[p0][sel].hw=dhw;S.recs[p0][sel].hwnote=dhw==='N'?dhn.trim():''}
  store();
- for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd),v=dph[kd];PH[k]=v;pput(k,v).then(()=>phQueue(k,v))}}dph={};
+ for(const kd of KP){if(dph[kd]!==undefined){const k=pkk(date,sel,kd);PH[k]=dph[kd];pput(k,dph[kd])}}dph={};
  dirty=false;draw();
  const e=document.getElementById('sv');if(e){e.textContent='Saved';e.className='mu'}
 }
@@ -168,14 +168,7 @@ function ensurePC(){
  let n=0;S.students.forEach(x=>{if(!x.pc){x.pc=genCode();n++}});
  if(n){S.ts=Date.now();persist();push()}
 }
-const parentLink=x=>new URL('parent.html',location.href).href;
-function cleanPC(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
-function pcErr(c,id){
- if(!c)return '';
- if(c.length<4)return 'Parent code must be at least 4 letters/numbers.';
- if(S.students.some(x=>x.id!==id&&String(x.pc||'').toUpperCase()===c))return 'This code is already used by another student.';
- return '';
-}
+const parentLink=x=>new URL('parent.html',location.href).href+'?c='+x.pc;
 function seedGroups(){
  if(!S.students.length||S.gseed)return;
  S.gseed=true;let n=0;
@@ -226,7 +219,7 @@ function vEntry(){
  ${pv?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><b>Check previous homework</b><p class="mu" style="margin:4px 0">Assigned on ${fmt(pv)}: ${esc(R(pv,sel).hwtext)}</p><label style="margin-top:8px">Homework completed?</label>${seg({hw:dhw},'hw',[['Y','Yes'],['N','No']],pv)}${dhw==='N'?`<label style="margin-top:8px">Why not completed? (child's reason)</label><textarea data-rn style="min-height:56px">${esc(dhn)}</textarea>`:''}</div>`:''}
  <div class="fg">
  <div class="fb"><label>Attendance</label><div id="attbox">${attHTML()}</div></div>
- <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<div class="row" style="gap:8px;margin:10px 0 4px;align-items:flex-end"><div style="flex:1"><span class="fs">Good things: homework</span>${gtSel('gtHw')}</div><div style="flex:1"><span class="fs">Good things: attendance</span>${gtSel('gtAt')}</div></div><button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
+ <div class="fb"><label>Homework</label><textarea data-t="hwtext">${esc(r.hwtext)}</textarea><button class="sm" data-qo="1" style="margin-top:8px">${qOpen?'Hide quick homework':'Quick homework (from syllabus)'}</button>${qOpen?quickHw('hw'):''}<div class="row" style="gap:8px;margin:10px 0 4px;align-items:flex-end"><div style="flex:1"><span class="fs">Good things: homework</span>${gtSel('gtHw')}</div><div style="flex:1"><span class="fs">Good things: attendance</span>${gtSel('gtAt')}</div></div><button class="pri" id="comb" onclick="combinedPhotoShare()" style="margin-top:8px">\ud83d\udcce Send Homework on WhatsApp</button><button class="sm" id="pn" style="margin-top:8px;width:100%">\u{1F514} Notify parent: check the app</button>${r.hwsent?`<p class="mu" style="margin:6px 0 0">\u2705 Homework sent (${new Date(r.hwsent).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})</p>`:(r.hwat?`<p class="mu" style="margin:6px 0 0">Not sent yet</p>`:'')}</div>
  <div class="fb">${photoUI('hw','Homework photo (notebook or book)')}</div>
  ${full?`<div class="fb"><label>Covered in class</label><textarea data-t="work">${esc(r.work)}</textarea><button class="sm" data-wo="1" style="margin-top:8px">${wOpen?'Hide quick list':'Quick (from syllabus)'}</button>${wOpen?quickHw('wk'):''}${photoUI('wk','Classwork photo')}${noteBox()}</div>
  <div class="fb"><label>Notebook <span class="fs">tap: \u{1F534} at school, \u{1F7E2} with child</span></label><div class="chips" style="flex-wrap:wrap;gap:4px">${SUB().map(sj=>{const v=r['nb_'+sj];return `<button class="chip" data-nb="${esc(sj)}" style="min-height:32px;padding:4px 10px">${esc(sj)}${v==='S'?' \u{1F534}':v==='H'?' \u{1F7E2}':''}</button>`}).join('')}</div></div>
@@ -240,44 +233,6 @@ function idb(){return _db||(_db=new Promise((ok,no)=>{try{const q=indexedDB.open
 async function pget(k){const d=await idb();return new Promise(ok=>{const r=d.transaction('p').objectStore('p').get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}
 async function pput(k,v){const d=await idb();return new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=()=>ok(true);t.onerror=()=>ok(false)})}
 const PH={},pk=(d,s)=>d+'|'+s;
-/* ---- photo cloud sync: so the parent app can see photos ---- */
-const phCK=k=>{const p=k.split('|');return p[0]+'|'+p[1]+'|'+(p[2]||'hw')};
-function phQ(){try{return JSON.parse(localStorage.getItem('tms_phq')||'{}')}catch(e){return {}}}
-function phQs(q){try{localStorage.setItem('tms_phq',JSON.stringify(q))}catch(e){}}
-function phQueue(k,v){const q=phQ();q[k]=v?'s':'d';phQs(q);phSync()}
-async function phAllKeys(){const d=await idb();return new Promise(ok=>{const r=d.transaction('p').objectStore('p').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
-let phBusy=false;
-function phSt(t){const e=document.getElementById('phs');if(e){e.textContent=t;e.onclick=()=>phSync()}}
-async function phSync(){
- if(phBusy)return;
- if(!CU){phSt('Photos: no cloud link');return}
- if(!navigator.onLine){phSt('Photos: offline');return}
- phBusy=true;let why='';
- try{
-  let bf='';try{bf=localStorage.getItem('tms_phbf')||''}catch(e){}
-  if(!bf){const ks=await phAllKeys(),q=phQ();ks.forEach(k=>{if(!q[k])q[k]='s'});phQs(q);try{localStorage.setItem('tms_phbf','1')}catch(e){}}
-  for(;;){
-   const q=phQ(),ks=Object.keys(q);if(!ks.length)break;
-   phSt('Photos: sending '+ks.length+' left...');
-   const k=ks[0];let ok=false;
-   try{
-    let r;
-    if(q[k]==='s'){const v=await pget(k);r=v?await call({a:'pset',key:phCK(k),data:v}):{ph:1,ok:true}}
-    else r=await call({a:'pdel',key:phCK(k)});
-    if(!r||r.ph!==1)why='Apps Script not updated (Deploy > New version)';
-    else if(r.error==='locked')why='locked (teacher key wrong)';
-    else if(!r.ok&&r.error!=='bad'&&r.error!=='big')why='error '+(r.error||'');
-    ok=!!(r&&r.ph===1&&(r.ok||r.error==='bad'||r.error==='big'));
-   }catch(e){why='no internet / blocked'}
-   if(!ok)break;
-   const q2=phQ();if(q2[k]===q[k])delete q2[k];phQs(q2);
-  }
- }catch(e){why='error'}
- phBusy=false;
- const left=Object.keys(phQ()).length;
- phSt(left?'Photos: '+left+' not sent - '+(why||'tap to retry'):'Photos: all sent');
-}
-window.addEventListener('online',()=>phSync());
 async function ensure(keys){let got=false;for(const k of keys){if(!(k in PH)){try{PH[k]=await pget(k)}catch(e){PH[k]=null}if(PH[k])got=true}}if(got)draw()}
 function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=no;im.src=u})}
 function hint(t){const ls=String(t||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);let o=ls.slice(0,2).join('\n'),cut=ls.length>2;if(o.length>70){o=o.slice(0,70).replace(/\s+\S*$/,'');cut=true}return esc(o).replace(/\n/g,'<br>')+(cut?' ...':'')}
@@ -694,9 +649,9 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Parent code (min 4 letters/numbers)</label><input data-epc value="${esc(s.pc||'')}" autocomplete="off" autocapitalize="characters" placeholder="e.g. MAHI2026" style="text-transform:uppercase"><label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="mu" style="margin:0 0 4px">Parent code: <b>${esc(s.pc||'')}</b></div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button></div>`).join('')||'<p class="mu">No students yet.</p>';
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="mu" style="margin:0 0 4px">Parent code: <b>${esc(s.pc||'')}</b></div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button></div>`).join('')||'<p class="mu">No students yet.</p>';
  return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
- <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Parent code (your own, min 4 letters/numbers - blank = auto)</label><input id="npc" autocomplete="off" autocapitalize="characters" placeholder="e.g. MAHI2026" style="margin-bottom:8px;text-transform:uppercase"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
+ <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
  <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><label>Secret key (same as TKEY in Apps Script, optional)</label><input data-ck type="password" value="${esc(KEY)}" autocomplete="off"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button></div>
@@ -788,15 +743,16 @@ document.addEventListener('click',async e=>{
  else if(b.id==='dsnew'){const nm=document.querySelector('[data-dn]').value.trim(),rows=parseDS(document.querySelector('[data-dx]').value),m=document.getElementById('dsmsg');if(!rows.length){m.textContent='No exam found. Each line must start with a date, e.g. 20/11/2026 Hindi.';return}(S.ds=S.ds||[]).push({id:'d'+Date.now(),name:nm||'Date sheet',stu:dsNew||S.students.map(x=>x.id),rows});dsNew=null;store();draw()}
  else if(b.id==='dsapply'){const x=(S.ds||[]).find(y=>y.id===dsEdit),rows=parseDS(document.querySelector('[data-dxe]').value);if(x&&rows.length){x.rows=rows;x.name=document.querySelector('[data-dne]').value.trim()||x.name;x.stu=[...dsEditStu];store()}dsEdit=null;draw()}
  else if(b.id==='dscancel'){dsEdit=null;draw()}
- else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(st&&st.pc){waOpen(st,'\u{1F4F1} *'+st.name+' - Parent App*\nOpen the link and enter your code to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\nYour code: *'+st.pc+'*\n\n- '+S.teacher+' (Tuition Teacher)')}}
- else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(st&&st.pc){try{await navigator.clipboard.writeText(parentLink(st)+'\nCode: '+st.pc);b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}}
+ else if(b.id==='pn'){const st=S.students.find(x=>x.id===sel);if(st&&st.pc)waOpen(st,'\u{1F4F1} *'+st.name+'* - record updated\nHomework and today\'s update are in the app. Tap to see:\n'+parentLink(st))}
+ else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(st&&st.pc){waOpen(st,'\u{1F4F1} *'+st.name+' - Parent App*\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}}
+ else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(st&&st.pc){try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,''),pc=cleanPC(document.getElementById('npc').value),er=pcErr(pc,'');if(er){alert(er);return}if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,bt:document.getElementById('ng').value.trim(),pc:pc||genCode()});store();draw()}}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,bt:document.getElementById('ng').value.trim()});store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(d.gt){S[d.gt]=(d.gv==='w'||d.gv==='m')?d.gv:+d.gv;store();draw()}
@@ -829,7 +785,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
- else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.bt=document.querySelector('[data-eg]').value.trim();const pc=cleanPC(document.querySelector('[data-epc]').value),er=pcErr(pc,st.id);if(er){alert(er);return}st.pc=pc||st.pc||genCode();store()}editId=null;draw()}
+ else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.bt=document.querySelector('[data-eg]').value.trim();store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);waOpen(st,summaryText())}
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
@@ -874,6 +830,6 @@ setInterval(updateClock,1000);updateClock();
 setInterval(renderPB,30000);document.addEventListener('visibilitychange',renderPB);
 applyMode();
 draw();
-pull().finally(phSync);
+pull();
 try{if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js')}catch(e){}
 </script></body></html>
