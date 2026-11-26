@@ -67,7 +67,7 @@ let D=null,code='',tab='ov',month='',note='',loading=false,seen=0;
 try{seen=+localStorage.getItem('pa_seen')||0}catch(e){}
 try{code=localStorage.getItem('pa_code')||''}catch(e){}
 const q=new URLSearchParams(location.search).get('c');
-if(q){code=q.trim();try{localStorage.setItem('pa_code',code)}catch(e){}try{history.replaceState(null,'',location.pathname)}catch(e){}}
+if(q){code=q.toUpperCase().replace(/[^A-Z0-9]/g,'');try{localStorage.setItem('pa_code',code)}catch(e){}try{history.replaceState(null,'',location.pathname)}catch(e){}}
 try{const c=localStorage.getItem('pa_data');if(c&&code)D=JSON.parse(c)}catch(e){}
 
 async function load(silent){
@@ -76,13 +76,14 @@ async function load(silent){
  let redraw=!silent;
  try{
   const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'parent',c:code})}).then(z=>z.json());
-  if(r&&r.ok){
+  if(r&&r.ok&&r.student){
    if(JSON.stringify(r)!==JSON.stringify(D)||note)redraw=true;
    D=r;note='';try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}
   }else if(r&&r.error==='bad'){
    D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}
    note='This code is not correct. Please check the link sent by the teacher.';redraw=true;
-  }else if(!silent)note='Could not load right now. Please try again.';
+  }else if(r&&r.ok){note='The app is not ready yet. Please ask the teacher.';redraw=true}
+  else if(!silent)note='Could not load right now. Please try again.';
  }catch(e){if(!silent)note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
  loading=false;if(redraw)draw();
 }
@@ -195,7 +196,7 @@ function draw(){
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
   <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2QX9A" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
-  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
   return;
  }
  const ms=months();if(!month||!ms.includes(month))month=ms[0];
