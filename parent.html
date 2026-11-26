@@ -43,7 +43,6 @@ input,select{width:100%;border:1px solid var(--ln);background:var(--bg);border-r
 .chip.r{border-color:var(--r);color:var(--r)}
 details{margin:4px 0}summary{cursor:pointer;padding:4px 0}
 .ft{text-align:center;margin-top:16px}
-.pimg{max-width:100%;border-radius:8px;border:1px solid var(--ln);display:block}
 </style></head><body>
 <div id="app"></div>
 <script>
@@ -64,23 +63,36 @@ const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return
 const nbS=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='S').map(k=>k.slice(3));
 const nbH=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='H').map(k=>k.slice(3));
 
-let D=null,code='',tab='ov',month='',note='',loading=false;
+let D=null,code='',tab='ov',month='',note='',loading=false,seen=0;
+try{seen=+localStorage.getItem('pa_seen')||0}catch(e){}
 try{code=localStorage.getItem('pa_code')||''}catch(e){}
 const q=new URLSearchParams(location.search).get('c');
 if(q){code=q.trim();try{localStorage.setItem('pa_code',code)}catch(e){}try{history.replaceState(null,'',location.pathname)}catch(e){}}
 try{const c=localStorage.getItem('pa_data');if(c&&code)D=JSON.parse(c)}catch(e){}
 
-async function load(){
+async function load(silent){
  if(!code){draw();return}
- loading=true;note='';draw();
+ if(!silent){loading=true;note='';draw()}
+ let redraw=!silent;
  try{
-  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'parent',c:code})}).then(x=>x.json());
-  if(r&&r.ok){D=r;try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}note=''}
-  else if(r&&r.error==='bad'){D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}note='This code is not correct. Please check the link sent by the teacher.'}
-  else note='Could not load right now. Please try again.';
- }catch(e){note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
- loading=false;draw();
+  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'parent',c:code})}).then(z=>z.json());
+  if(r&&r.ok){
+   if(JSON.stringify(r)!==JSON.stringify(D)||note)redraw=true;
+   D=r;note='';try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}
+  }else if(r&&r.error==='bad'){
+   D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}
+   note='This code is not correct. Please check the link sent by the teacher.';redraw=true;
+  }else if(!silent)note='Could not load right now. Please try again.';
+ }catch(e){if(!silent)note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
+ loading=false;if(redraw)draw();
 }
+const isNew=()=>!!(D&&D.nu&&D.nu>seen);
+function ft(ms){const d=new Date(ms),z=n=>String(n).padStart(2,'0');return z(d.getDate())+'/'+z(d.getMonth()+1)+' '+z(d.getHours())+':'+z(d.getMinutes())}
+function markSeen(){seen=(D&&D.nu)||0;try{localStorage.setItem('pa_seen',String(seen))}catch(e){}}
+function newBanner(){
+ return isNew()?`<div class="bx g" style="border-width:2px"><b>\u{1F514} New update from the teacher</b><div class="mu">${ft(D.nu)} | Homework and today's record are updated.</div><div style="margin-top:8px;display:flex;gap:8px"><button class="on" id="nvw" style="flex:1">View today</button><button id="nok" style="flex:1">OK</button></div></div>`:'';
+}
+function updBadge(){try{document.title=(isNew()?'\u{1F514} ':'')+'Tuition Record';if(navigator.setAppBadge){if(isNew())navigator.setAppBadge(1);else navigator.clearAppBadge()}}catch(e){}}
 function todayIso(){return iso(new Date())}
 function months(){
  const set={};set[todayIso().slice(0,7)]=1;
@@ -111,26 +123,6 @@ function attBadge(r,d){
  if(r.att==='A')return '<span class="badge r">Absent</span>';
  if(r.att==='H'||isSun(d))return '<span class="badge b">Holiday</span>';
  return '';
-}
-const PHC={},PHB={};
-const PHL={hw:'Homework photo',wk:'Classwork photo',ts:'Test photo'};
-function phHtml(d,only){
- return ((D.ph||{})[d]||[]).filter(k=>!only||only.includes(k)).map(k=>{
-  const id=d+'|'+k,u=PHC[id];
-  if(u)return `<div class="row"><div class="k">${PHL[k]}</div><div class="v"><img class="pimg" src="${u}" alt="${PHL[k]}"></div></div>`;
-  const st=PHB[id];
-  return `<div class="row"><div class="k">${PHL[k]}</div><div class="v"><button data-ph="${id}">${st==='l'?'Loading...':st==='e'?'Try again':'\u{1F4F7} View photo'}</button></div></div>`;
- }).join('');
-}
-async function phLoad(id){
- if(PHB[id]==='l')return;
- PHB[id]='l';draw();
- const p=id.split('|');
- try{
-  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'photo',c:code,d:p[0],p:p[1]})}).then(x=>x.json());
-  if(r&&r.ok&&r.img){PHC[id]=r.img;delete PHB[id]}else PHB[id]='e';
- }catch(e){PHB[id]='e'}
- draw();
 }
 function ovTab(){
  const s=stats(month),hw=s.hy+s.hn,hp=hw?Math.round(s.hy*100/hw):null,ta=s.ts.length?Math.round(s.ts.reduce((a,b)=>a+b,0)/s.ts.length):null;
@@ -171,7 +163,6 @@ function dayTab(){
   <div class="row"><div class="k">Homework done?</div><div class="v">${r.hw==='Y'?'<span class="badge g">Completed</span>':r.hw==='N'?'<span class="badge r">Not completed</span>'+(r.hwnote?' '+esc(r.hwnote):''):'<span class="mu">Not checked yet</span>'}</div></div>`:''}
   ${s.length||h.length?`<div class="row"><div class="k">Notebook</div><div class="v">${s.map(x=>`<span class="chip r">${esc(x)}: at school</span>`).join('')}${h.map(x=>`<span class="chip">${esc(x)}: with child</span>`).join('')}</div></div>`:''}
   ${r.tsub||r.tmk?`<div class="row"><div class="k">Test</div><div class="v">${esc(r.tsub||'')} <b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>`:''}
-  ${phHtml(d)}
   ${r.pnote?`<div class="bx g" style="margin:6px 0 0">\u{1F7E2} ${esc(r.pnote)}</div>`:''}
   ${r.nnote?`<div class="bx r" style="margin:6px 0 0">\u{1F534} ${esc(r.nnote)}</div>`:''}
   ${r.note?`<div class="row"><div class="k">Note</div><div class="v">${esc(r.note)}</div></div>`:''}
@@ -182,7 +173,7 @@ function testTab(){
  if(!t.length)return '<div class="c mu">No tests yet.</div>';
  const ps=t.map(x=>pct(x[1])).filter(v=>v!==null),a=ps.length?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null;
  return `${a===null?'':`<div class="c"><span class="mu">Overall test average</span> <span class="big ${a>=40?'g':'r'}">${a}%</span></div>`}
- <div class="c">${t.map(([d,r])=>{const p=pct(r);return `<div class="row"><div class="k">${fmt(d).slice(0,5)}</div><div class="v">${esc(r.tsub||'Test')}</div><div><b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>${phHtml(d,['ts'])}`}).join('')}</div>`;
+ <div class="c">${t.map(([d,r])=>{const p=pct(r);return `<div class="row"><div class="k">${fmt(d).slice(0,5)}</div><div class="v">${esc(r.tsub||'Test')}</div><div><b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>`}).join('')}</div>`;
 }
 function exLabel(d){const k=ddiff(todayIso(),d);return k===0?'<b class="r">Today</b>':k===1?'<b>Tomorrow</b>':dayName(d).slice(0,3)+' '+fmt(d).slice(0,5)}
 function allExams(){const a=[];(D.ds||[]).forEach(x=>(x.rows||[]).forEach(r=>a.push({d:r.d,s:r.s,n:x.name})));return a.sort((p,q)=>p.d<q.d?-1:p.d>q.d?1:0)}
@@ -204,23 +195,27 @@ function draw(){
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
   <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2QX9A" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
-  const cdi=$('cd');if(cdi)cdi.onkeydown=e=>{if(e.key==='Enter')$('go').click()};const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').trim();if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
   return;
  }
  const ms=months();if(!month||!ms.includes(month))month=ms[0];
  const upd=D.ts?new Date(D.ts):null,u=upd?String(upd.getDate()).padStart(2,'0')+'/'+String(upd.getMonth()+1).padStart(2,'0')+' '+String(upd.getHours()).padStart(2,'0')+':'+String(upd.getMinutes()).padStart(2,'0'):'';
  const body=tab==='ov'?ovTab():tab==='day'?dayTab():tab==='test'?testTab():exTab();
  el.innerHTML=`<div class="hd"><h1>${esc(D.student.name)}</h1><div class="mu">Class ${esc(D.student.cls)}${D.teacher?' | Teacher: '+esc(D.teacher):''}</div>${u?`<div class="fs">Updated ${u}</div>`:''}</div>
- ${note?`<div class="bx b">${esc(note)}</div>`:''}
+ ${newBanner()}${note?`<div class="bx b">${esc(note)}</div>`:''}
  <div class="tabs">${[['ov','Overview'],['day','Daily'],['test','Tests'],['ex','Exams']].map(([k,l])=>`<button class="${tab===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>
  ${tab==='ov'||tab==='day'?`<select id="mon">${ms.map(m=>`<option value="${m}"${m===month?' selected':''}>${esc(mlabel(m))}</option>`).join('')}</select>`:''}
  ${body}
  <div class="ft"><button id="rf">${loading?'Loading...':'Refresh'}</button> <button id="lo">Change code</button></div>`;
  el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw();window.scrollTo(0,0)});
  const sel=$('mon');if(sel)sel.onchange=()=>{month=sel.value;draw()};
- el.querySelectorAll('[data-ph]').forEach(b=>b.onclick=()=>phLoad(b.dataset.ph));
- $('rf').onclick=load;
+ const nv=$('nvw');if(nv)nv.onclick=()=>{markSeen();tab='day';month=todayIso().slice(0,7);draw();window.scrollTo(0,0)};
+ const nk=$('nok');if(nk)nk.onclick=()=>{markSeen();draw()};
+ updBadge();
+ $('rf').onclick=()=>load();
  $('lo').onclick=()=>{code='';D=null;try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}draw()};
 }
 draw();load();
+setInterval(()=>{if(!document.hidden&&code&&!loading)load(true)},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&code)load(true)});
 </script></body></html>
