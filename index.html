@@ -85,11 +85,13 @@ async function pull(){
  if(!CU)return;sy('Checking cloud...');
  try{
   const r=await call({a:'get'});
-  if(!r.ok){sy('Cloud: error, check the link');return}
+  if(!r.ok){sy(r.error==='locked'?'Cloud: wrong or missing secret key':'Cloud: error, check the link');return}
+  if(r.data&&r.data.students)r.data.students.forEach(c=>{const l=S.students.find(x=>x.id===c.id);if(l&&!l.pc&&c.pc)l.pc=c.pc});
   const rt=r.data?(r.data.ts||0):0;
   if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Data loaded from cloud')}
   else if((S.ts||0)>rt){await doPush()}
   else sy('Cloud: everything is up to date')
+  if(S.students.some(x=>!x.pc)){ensurePC();draw()}
  }catch(e){sy('Cloud: offline')}
 }
 let ip=null;
@@ -649,7 +651,7 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="mu" style="margin:0 0 4px">Parent code: <b>${esc(s.pc||'')}</b></div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button></div>`).join('')||'<p class="mu">No students yet.</p>';
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="mu" style="margin:0 0 4px">Parent code: ${s.pc?'<b>'+esc(s.pc)+'</b>':'<span class="warn">will appear after sync</span>'}</div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button><button class="sm" data-pnc="${s.id}">New code</button></div>`).join('')||'<p class="mu">No students yet.</p>';
  return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
  <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
@@ -659,7 +661,6 @@ function vStu(){
 }
 function draw(){
  seedGroups();
- ensurePC();
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  $v.innerHTML=tab==='entry'?vEntry():tab==='rep'?vRep():tab==='syl'?vSyl():vStu();
  if(tab==='entry'&&sel)ensure(KP.map(kd=>pkk(date,sel,kd)));
@@ -752,8 +753,9 @@ document.addEventListener('click',async e=>{
   sy('Parent app updated');
   waOpen(st,'\u{1F4F1} *'+st.name+'* - record updated\nHomework and today\'s update are in the app. Tap to see:\n'+parentLink(st));
  }
- else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(st&&st.pc){waOpen(st,'\u{1F4F1} *'+st.name+' - Parent App*\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}}
- else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(st&&st.pc){try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}}
+ else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();waOpen(st,'\u{1F4F1} *'+st.name+'* - Parent App\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}
+ else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
+ else if(d.pnc){const st=S.students.find(x=>x.id===d.pnc);if(st&&confirm('Make a new code for '+st.name+'? The old link will stop working.')){st.pc=genCode();store();draw();await doPush()}}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
