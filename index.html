@@ -71,15 +71,21 @@ const store=()=>{S.ts=Date.now();persist();push()};
 const DEF_URL='https://script.google.com/macros/s/AKfycbzVTdVBoJtSjvCiQPbuLv6ovyJBH2QJm47WFXxXgv5O10dR4v6A5r16iWCiOIN1fRiYoQ/exec';
 let CU=DEF_URL;try{CU=localStorage.getItem('tms_url')||DEF_URL}catch(e){}
 let KEY='';try{KEY=localStorage.getItem('tms_key')||''}catch(e){}
-let tmr=null,busy=false,again=false;
+let tmr=null,busy=false,again=false,again2=false,pushP=null;
 function sy(t){const e=document.getElementById('sy');if(e)e.textContent=t}
 async function call(b){const r=await fetch(CU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({k:KEY},b))});return r.json()}
 function push(){if(!CU)return;clearTimeout(tmr);sy('Cloud: syncing...');tmr=setTimeout(doPush,2000)}
-async function doPush(){
- if(busy){again=true;return}busy=true;
- try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: saved':'Cloud: error, will retry')}
- catch(e){sy('Cloud: offline, will sync when online');again=true}
- busy=false;if(again&&navigator.onLine){again=false;push()}
+function doPush(){
+ if(busy){again2=true;return pushP}
+ busy=true;
+ pushP=(async()=>{
+  try{const r=await call({a:'put',data:S});sy(r.ok?'Cloud: saved':'Cloud: error, will retry')}
+  catch(e){sy('Cloud: offline, will sync when online');again=true}
+  busy=false;
+  if(again2){again2=false;await doPush()}
+  else if(again&&navigator.onLine){again=false;push()}
+ })();
+ return pushP;
 }
 async function pull(){
  if(!CU)return;sy('Checking cloud...');
@@ -91,7 +97,7 @@ async function pull(){
   if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Data loaded from cloud')}
   else if((S.ts||0)>rt){await doPush()}
   else sy('Cloud: everything is up to date')
-  if(S.students.some(x=>!x.pc)){ensurePC();draw()}
+  if(S.students.some(x=>!x.pc)){ensurePC();await doPush();draw()}
  }catch(e){sy('Cloud: offline')}
 }
 let ip=null;
@@ -656,7 +662,7 @@ function vStu(){
  <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
- <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><label>Secret key (same as TKEY in Apps Script, optional)</label><input data-ck type="password" value="${esc(KEY)}" autocomplete="off"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button></div>
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><label>Secret key (same as TKEY in Apps Script, optional)</label><input data-ck type="password" value="${esc(KEY)}" autocomplete="off"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button><button class="sm" id="tc" style="margin-top:8px;width:100%">Test parent codes</button><p class="mu" id="tcr"></p></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data is stored in this device's browser. Take a backup before changing devices.</p><button id="bk">Save Backup</button><label>Restore Backup</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
@@ -755,6 +761,21 @@ document.addEventListener('click',async e=>{
  }
  else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();waOpen(st,'\u{1F4F1} *'+st.name+'* - Parent App\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}
  else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
+ else if(b.id==='tc'){
+  const out=document.getElementById('tcr');b.textContent='Testing...';out.textContent='';
+  await pull();
+  const st0=document.getElementById('sy').textContent,L=[];
+  if(/error|key|offline/i.test(st0)){out.innerHTML='\u274C Could not reach the cloud: '+esc(st0)+'<br>Check the Apps Script link and the secret key above.';b.textContent='Test parent codes';return}
+  await doPush();
+  for(const x of S.students){
+   let m;
+   try{const r=await call({a:'parent',c:x.pc||'NONE'});
+    m=r&&r.student?'\u2705 works':(r&&r.error==='bad')?'\u274C code not found in the Sheet':(r&&r.ok)?'\u26A0\uFE0F Apps Script is old. Deploy a New version':'\u274C error: '+esc(r&&r.error||'unknown')}
+   catch(e){m='\u274C no internet'}
+   L.push('<b>'+esc(x.name)+'</b> ('+esc(x.pc||'no code')+'): '+m);
+  }
+  out.innerHTML=L.join('<br>')||'No students.';b.textContent='Test parent codes';
+ }
  else if(d.pnc){const st=S.students.find(x=>x.id===d.pnc);if(st&&confirm('Make a new code for '+st.name+'? The old link will stop working.')){st.pc=genCode();store();draw();await doPush()}}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
