@@ -743,7 +743,15 @@ document.addEventListener('click',async e=>{
  else if(b.id==='dsnew'){const nm=document.querySelector('[data-dn]').value.trim(),rows=parseDS(document.querySelector('[data-dx]').value),m=document.getElementById('dsmsg');if(!rows.length){m.textContent='No exam found. Each line must start with a date, e.g. 20/11/2026 Hindi.';return}(S.ds=S.ds||[]).push({id:'d'+Date.now(),name:nm||'Date sheet',stu:dsNew||S.students.map(x=>x.id),rows});dsNew=null;store();draw()}
  else if(b.id==='dsapply'){const x=(S.ds||[]).find(y=>y.id===dsEdit),rows=parseDS(document.querySelector('[data-dxe]').value);if(x&&rows.length){x.rows=rows;x.name=document.querySelector('[data-dne]').value.trim()||x.name;x.stu=[...dsEditStu];store()}dsEdit=null;draw()}
  else if(b.id==='dscancel'){dsEdit=null;draw()}
- else if(b.id==='pn'){const st=S.students.find(x=>x.id===sel);if(st&&st.pc)waOpen(st,'\u{1F4F1} *'+st.name+'* - record updated\nHomework and today\'s update are in the app. Tap to see:\n'+parentLink(st))}
+ else if(b.id==='pn'){
+  const st=S.students.find(x=>x.id===sel);if(!st||!st.pc)return;
+  sy('Updating parent app...');
+  if(dirty)doSave();
+  st.nu=Date.now();store();
+  try{await doPush()}catch(x){}
+  sy('Parent app updated');
+  waOpen(st,'\u{1F4F1} *'+st.name+'* - record updated\nHomework and today\'s update are in the app. Tap to see:\n'+parentLink(st));
+ }
  else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(st&&st.pc){waOpen(st,'\u{1F4F1} *'+st.name+' - Parent App*\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}}
  else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(st&&st.pc){try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
