@@ -92,12 +92,12 @@ async function pull(){
  try{
   const r=await call({a:'get'});
   if(!r.ok){sy(r.error==='locked'?'Cloud: wrong or missing secret key':'Cloud: error, check the link');return}
-  if(r.data&&r.data.students)r.data.students.forEach(c=>{const l=S.students.find(x=>x.id===c.id);if(l&&!l.pc&&okCode(c.pc))l.pc=c.pc});
+  if(r.data&&r.data.students)r.data.students.forEach(c=>{const l=S.students.find(x=>x.id===c.id);if(l&&!l.pc&&okTok(c.pc))l.pc=c.pc});
   const rt=r.data?(r.data.ts||0):0;
   if(rt>(S.ts||0)){S=Object.assign({students:[],recs:{},teacher:'Keshav Gangwar',subjects:['SST','Math','Science','Hindi','English']},r.data);persist();dk='';dirty=false;draw();sy('Data loaded from cloud')}
   else if((S.ts||0)>rt){await doPush()}
   else sy('Cloud: everything is up to date')
-  if(S.students.some(x=>!okCode(x.pc))){ensurePC();await doPush();draw()}
+  if(ensurePC()){await doPush();draw()}
  }catch(e){sy('Cloud: offline')}
 }
 let ip=null;
@@ -167,19 +167,24 @@ function applyMode(){document.documentElement.classList.toggle('desk',MODE==='de
 function seg(r,f,opts,pd){return `<div class="seg">${opts.map(([v,l])=>`<button class="${r[f]===v?'on':''}" data-f="${f}" data-v="${v}"${pd?` data-pd="${pd}"`:''}>${l}</button>`).join('')}</div>`}
 function prevHw(sid,d){const ks=Object.keys(S.recs).filter(k=>k<d&&((S.recs[k][sid]||{}).hwtext||'').trim()).sort();return ks.length?ks[ks.length-1]:null}
 const SEEDG={mahi:'A',ansh:'A',duggu:'B',vaidik:'B',ayush:'C',ayus:'C',simran:'C'};
-let pcEdit=null;
-const okCode=c=>/^[A-Za-z0-9]{4}$/.test(String(c||''));
-function genCode(){
- const used=new Set(S.students.map(x=>x.pc));
- const a=new Uint32Array(1);let c;
- do{(window.crypto||{getRandomValues:x=>{x[0]=Math.random()*4294967295}}).getRandomValues(a);c=String(a[0]%10000).padStart(4,'0')}while(used.has(c));
- return c;
+const okTok=c=>/^[A-Z0-9]{16}$/.test(String(c||''));
+function genTok(used){
+ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',a=new Uint8Array(16);let t;
+ do{(window.crypto||{getRandomValues:x=>x.forEach((_,i)=>x[i]=Math.random()*256)}).getRandomValues(a);t=Array.from(a).map(v=>A[v%32]).join('')}while(used.has(t));
+ return t;
 }
+/* Students in the same group (same parents) share one link key; a student without a group has their own. */
 function ensurePC(){
- let n=0;const seen=new Set();
- S.students.forEach(x=>{const u=String(x.pc||'').toUpperCase();if(okCode(x.pc)&&!seen.has(u))seen.add(u);else x.pc=''});
- S.students.forEach(x=>{if(!x.pc){x.pc=genCode();n++}});
+ const fam={};
+ S.students.forEach(x=>{const g=String(x.bt||'').trim().toLowerCase(),k=g?'g:'+g:'s:'+x.id;(fam[k]=fam[k]||[]).push(x)});
+ const used=new Set();let n=0;
+ Object.keys(fam).forEach(k=>{
+  const m=fam[k];let t=m.map(x=>x.pc).find(c=>okTok(c)&&!used.has(c));
+  if(!t)t=genTok(used);
+  used.add(t);m.forEach(x=>{if(x.pc!==t){x.pc=t;n++}});
+ });
  if(n){S.ts=Date.now();persist();push()}
+ return n;
 }
 const parentLink=x=>new URL('parent.html',location.href).href+'?c='+x.pc;
 function seedGroups(){
@@ -662,12 +667,12 @@ function vRep(){
  <div class="wrap">${build()}</div>`;
 }
 function vStu(){
- const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Group (students who study together get the same name)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="mu" style="margin:0 0 4px">Parent code: ${s.pc?'<b>'+esc(s.pc)+'</b>':'<span class="warn">will appear after sync</span>'}</div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button><button class="sm" data-psc="${s.id}">Set my code</button></div>${pcEdit===s.id?`<div class="row" style="margin:0 0 4px"><input data-pce inputmode="text" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="4 letters/numbers" value="${esc(s.pc||'')}" style="max-width:120px;flex:none"><button class="sm on" id="pcsave">Save</button><button class="sm" id="pccancel">Cancel</button></div><p class="mu" id="pcm" style="margin:0 0 6px">Enter exactly 4 letters or numbers.</p>`:''}`).join('')||'<p class="mu">No students yet.</p>';
+ const list=S.students.map(s=>editId===s.id?`<div style="background:var(--soft);border-radius:10px;padding:10px;margin:8px 0"><input data-en value="${esc(s.name)}" placeholder="Name" style="margin-bottom:8px"><div class="row"><input data-ec value="${esc(s.cls)}" placeholder="Class" style="max-width:90px"><input data-ep inputmode="tel" value="${esc(s.ph)}" placeholder="Parent WhatsApp number"></div><label>Which WhatsApp does the parent use?</label>${wtSeg(editWt,'e')}<label>Family group (same parents: give the same name, e.g. A)</label><input data-eg value="${esc(s.bt||'')}" placeholder="e.g. A"><div class="seg" style="margin-top:10px"><button class="on" id="esave">Save</button><button id="ecancel">Cancel</button></div></div>`:`<div class="row"><div>${esc(s.name)} <span class="mu">Class ${esc(s.cls)}${s.ph?' | '+esc(s.ph)+' ('+(s.wt==='w'?'WhatsApp':'Business')+')':''}${s.bt?' | group '+esc(s.bt):''}</span></div><button data-edit="${s.id}">Edit</button><button data-del="${s.id}">${pend===s.id?'Confirm delete?':'Delete'}</button></div><div class="seg" style="margin:0 0 8px"><button class="sm" data-pl="${s.id}">Send parent app link</button><button class="sm" data-pcp="${s.id}">Copy link</button></div>`).join('')||'<p class="mu">No students yet.</p>';
  return `<div class="c"><h2>Settings</h2><label>Teacher name</label><input data-teacher value="${esc(S.teacher)}"><label>Notebook subjects</label><input data-subjects value="${esc(SUB().join(', '))}"><p class="mu">Separate with commas, e.g. SST, Math, Science</p><label>Custom holidays / festivals (one per line: YYYY-MM-DD Name)</label><textarea data-hol style="min-height:90px" placeholder="2026-11-08 Diwali&#10;2026-12-01 School Annual Day">${esc(holTxt())}</textarea><p class="mu">Sundays are automatically a holiday. Common festivals are already built in. Anything you add here shows up next to the date.</p><button class="pri" id="ss">Save Settings</button></div>
- <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Group (students who study together get the same name)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
+ <div class="c"><h2>Add Student</h2><div class="row"><input id="nn" placeholder="Name"><input id="nc" placeholder="Class" style="max-width:90px"></div><input id="np" inputmode="tel" placeholder="Parent WhatsApp number (optional)" style="margin-bottom:8px"><label>Which WhatsApp does the parent use?</label>${wtSeg(newWt,'n')}<label>Family group (same parents: give the same name, e.g. A)</label><input id="ng" placeholder="e.g. A"><button class="pri" id="add" style="margin-top:10px">Add</button></div>
  <div class="c"><h2>All Students</h2>${list}</div>
  ${ttCard()}
- <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><label>Secret key (same as TKEY in Apps Script, optional)</label><input data-ck type="password" value="${esc(KEY)}" autocomplete="off"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button><button class="sm" id="tc" style="margin-top:8px;width:100%">Test parent codes</button><p class="mu" id="tcr"></p></div>
+ <div class="c"><h2>Cloud Backup (Google Sheets)</h2><input data-cu value="${esc(CU)}" placeholder="Apps Script web app link"><label>Secret key (same as TKEY in Apps Script, optional)</label><input data-ck type="password" value="${esc(KEY)}" autocomplete="off"><p class="mu">On another device, open the app empty and enter this link to load the existing data.</p><button class="pri" id="cu">Sync now</button><button class="sm" id="tc" style="margin-top:8px;width:100%">Test parent links</button><p class="mu" id="tcr"></p></div>
  <div class="c"><h2>Backup</h2><p class="mu">Data is stored in this device's browser. Take a backup before changing devices.</p><button id="bk">Save Backup</button><label>Restore Backup</label><input type="file" id="rs" accept=".json"><p class="mu" id="ms">${esc(msg)}</p></div>`;
 }
 function draw(){
@@ -764,39 +769,41 @@ document.addEventListener('click',async e=>{
   sy('Parent app updated');
   waOpen(st,'\u{1F4F1} *'+st.name+'* - record updated\nHomework and today\'s update are in the app. Tap to see:\n'+parentLink(st));
  }
- else if(d.pl){const st=S.students.find(x=>x.id===d.pl);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();waOpen(st,'\u{1F4F1} *'+st.name+'* - Parent App\nTap the link to see your child\'s attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)')}
- else if(d.pcp){const st=S.students.find(x=>x.id===d.pcp);if(!st)return;if(!st.pc){sy('Code is not ready yet. Tap Sync now first.');return}sy('Saving code to cloud...');await doPush();try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
+ else if(d.pl){
+  const st=S.students.find(x=>x.id===d.pl);if(!st)return;
+  if(!okTok(st.pc)){sy('Link is not ready yet. Tap Sync now first.');return}
+  sy('Saving link to cloud...');await doPush();
+  const fam=S.students.filter(x=>x.pc===st.pc).map(x=>x.name).join(' & ');
+  waOpen(st,'\u{1F4F1} *'+fam+'* - Parent App\nTap the link to see your '+(fam.indexOf(' & ')>=0?'children\'s':'child\'s')+' attendance, homework, tests and exam dates:\n'+parentLink(st)+'\n\n- '+S.teacher+' (Tuition Teacher)');
+ }
+ else if(d.pcp){
+  const st=S.students.find(x=>x.id===d.pcp);if(!st)return;
+  if(!okTok(st.pc)){sy('Link is not ready yet. Tap Sync now first.');return}
+  sy('Saving link to cloud...');await doPush();
+  try{await navigator.clipboard.writeText(parentLink(st));b.textContent='Copied'}catch(x){b.textContent='Copy failed'}
+ }
  else if(b.id==='tc'){
   const out=document.getElementById('tcr');b.textContent='Testing...';out.textContent='';
   await pull();
   const st0=document.getElementById('sy').textContent,L=[];
-  if(/error|key|offline/i.test(st0)){out.innerHTML='\u274C Could not reach the cloud: '+esc(st0)+'<br>Check the Apps Script link and the secret key above.';b.textContent='Test parent codes';return}
+  if(/error|key|offline/i.test(st0)){out.innerHTML='\u274C Could not reach the cloud: '+esc(st0)+'<br>Check the Apps Script link and the secret key above.';b.textContent='Test parent links';return}
   await doPush();
   for(const x of S.students){
    let m;
    try{const r=await call({a:'parent',c:x.pc||'NONE'});
-    m=r&&r.student?'\u2705 works':(r&&r.error==='bad')?'\u274C code not found in the Sheet':(r&&r.ok)?'\u26A0\uFE0F Apps Script is old. Deploy a New version':'\u274C error: '+esc(r&&r.error||'unknown')}
+    m=r&&r.kids?'\u2705 works ('+esc(r.kids.map(k=>k.student.name).join(', '))+')':(r&&r.error==='bad')?'\u274C link not found in the Sheet':(r&&r.ok)?'\u26A0\uFE0F Apps Script is old. Deploy a New version':'\u274C error: '+esc(r&&r.error||'unknown')}
    catch(e){m='\u274C no internet'}
-   L.push('<b>'+esc(x.name)+'</b> ('+esc(x.pc||'no code')+'): '+m);
+   L.push('<b>'+esc(x.name)+'</b>: '+m);
   }
-  out.innerHTML=L.join('<br>')||'No students.';b.textContent='Test parent codes';
+  out.innerHTML=L.join('<br>')||'No students.';b.textContent='Test parent links';
  }
- else if(d.psc){pcEdit=d.psc;draw()}
- else if(b.id==='pcsave'){
-  const st=S.students.find(x=>x.id===pcEdit);if(!st)return;
-  const v=document.querySelector('[data-pce]').value.trim().toUpperCase(),m=document.getElementById('pcm');
-  if(!okCode(v)){m.textContent='The code must be exactly 4 letters or numbers.';m.className='warn';return}
-  if(S.students.some(x=>x.id!==st.id&&String(x.pc||'').toUpperCase()===v)){m.textContent='This code is already used by another student. Choose a different one.';m.className='warn';return}
-  st.pc=v;pcEdit=null;store();draw();await doPush();
- }
- else if(b.id==='pccancel'){pcEdit=null;draw()}
  else if(d.nt){const txt=noteType()==='N'?dr.nnote:dr.pnote;dr.ntp=d.nt;if(d.nt==='N'){dr.nnote=txt||'';dr.pnote=''}else{dr.pnote=txt||'';dr.nnote=''}mark();draw()}
  else if(d.nb!==undefined){const k='nb_'+d.nb,v=dr[k];dr[k]=!v?'S':(v==='S'?'H':'');mark();draw()}
  else if(d.f==='att'&&!d.pd){if(dr.am&&dr.att===d.v){delete dr.am;dr.att=autoAtt(dr,date);dr.aa=1}else{dr.att=d.v;dr.am=1;delete dr.aa}mark();draw()}
  else if(d.f){if(d.pd){dhw=(dhw===d.v)?'':d.v;mark()}else setF(d.f,d.v,true);draw()}
  else if(d.q){const n=new Date();to=iso(n);from=d.q==='w'?iso(new Date(n.getTime()-6*864e5)):iso(new Date(n.getFullYear(),n.getMonth(),1));draw()}
  else if(d.del){if(pend===d.del){S.students=S.students.filter(s=>s.id!==d.del);pend=null;store()}else pend=d.del;draw()}
- else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,bt:document.getElementById('ng').value.trim()});store();draw()}}
+ else if(b.id==='add'){const n=document.getElementById('nn').value.trim(),c=document.getElementById('nc').value.trim(),p=document.getElementById('np').value.replace(/\D/g,'');if(n){S.students.push({id:'s'+Date.now(),name:n,cls:c,ph:p,wt:newWt,bt:document.getElementById('ng').value.trim()});ensurePC();store();draw()}}
  else if(d.pb){const q=d.pb.split('|');if(!okLeave())return;tab='entry';date=q[0];sel=q[1];msg='';draw();window.scrollTo(0,0)}
  else if(d.ps){const q=d.ps.split('|'),r=(S.recs[q[0]]||{})[q[1]];if(r){r.hwsent=Date.now();if(date===q[0]&&sel===q[1])dr.hwsent=r.hwsent;store();draw()}}
  else if(d.gt){S[d.gt]=(d.gv==='w'||d.gv==='m')?d.gv:+d.gv;store();draw()}
@@ -829,7 +836,7 @@ document.addEventListener('click',async e=>{
  else if(b.id==='sprompt'){try{await navigator.clipboard.writeText(SPROMPT);b.textContent='Prompt copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='ib'){if(ip){ip.prompt();ip=null;b.style.display='none'}}
  else if(b.id==='ecancel'){editId=null;draw()}
- else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.bt=document.querySelector('[data-eg]').value.trim();store()}editId=null;draw()}
+ else if(b.id==='esave'){const st=S.students.find(x=>x.id===editId),n=document.querySelector('[data-en]').value.trim();if(st&&n){st.name=n;st.cls=document.querySelector('[data-ec]').value.trim();st.ph=document.querySelector('[data-ep]').value.replace(/\D/g,'');st.wt=editWt;st.bt=document.querySelector('[data-eg]').value.trim();ensurePC();store()}editId=null;draw()}
  else if(b.id==='sw'){const st=S.students.find(s=>s.id===rs);waOpen(st,summaryText())}
  else if(b.id==='sc'){try{await navigator.clipboard.writeText(summaryText());b.textContent='Copied'}catch(x){b.textContent='Copy failed'}}
  else if(b.id==='svb')doSave();
@@ -843,7 +850,6 @@ document.addEventListener('input',e=>{
  if(t.dataset.t){setF(t.dataset.t,t.value,false);if(t.dataset.t==='hwtext')refreshAtt()}
  else if(t.dataset.rn!==undefined){dhn=t.value;mark()}
  else if(t.dataset.ntText!==undefined){setNote(t.value)}
- else if(t.dataset.pce!==undefined){t.value=t.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,4);const m=document.getElementById('pcm');if(m){m.className='mu';m.textContent=t.value.length===4?'Looks good. Tap Save.':'Enter exactly 4 letters or numbers.'}}
 });
 document.addEventListener('paste',e=>{
  const t=e.target;
@@ -853,7 +859,6 @@ document.addEventListener('paste',e=>{
   if(t.dataset.t){setF(t.dataset.t,text,false);draw()}
   else if(t.dataset.rn!==undefined){dhn=text;mark();draw()}
   else if(t.dataset.ntText!==undefined){setNote(text);draw()}
-  else if(t.dataset.pce!==undefined){t.value=text.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,4)}
   else if(t.dataset.sxe!==undefined){t.value=text;mark();draw()}
   else t.value=text;
  }
