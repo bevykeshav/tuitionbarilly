@@ -82,7 +82,8 @@ async function load(silent){
   }else if(r&&r.error==='bad'){
    D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}
    note='This code is not correct. Please check the link sent by the teacher.';redraw=true;
-  }else if(r&&r.ok){note='The app is not ready yet. Please ask the teacher.';redraw=true}
+  }else if(r&&r.error==='busy'){note='Too many wrong attempts. Please try again after 10 minutes.';redraw=true}
+  else if(r&&r.ok){note='The app is not ready yet. Please ask the teacher.';redraw=true}
   else if(!silent)note='Could not load right now. Please try again.';
  }catch(e){if(!silent)note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
  loading=false;if(redraw)draw();
@@ -195,7 +196,7 @@ function draw(){
  const el=$('app');
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
-  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2QX9A" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
+  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="4-digit code, e.g. 4821" inputmode="numeric" maxlength="8" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
   const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
   return;
  }
