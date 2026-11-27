@@ -63,12 +63,19 @@ const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return
 const nbS=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='S').map(k=>k.slice(3));
 const nbH=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='H').map(k=>k.slice(3));
 
-let D=null,code='',tab='ov',month='',note='',loading=false,seen=0;
-try{seen=+localStorage.getItem('pa_seen')||0}catch(e){}
+let D=null,DD=null,kid='',code='',tab='ov',month='',note='',loading=false,seen=0;
+try{kid=localStorage.getItem('pa_kid')||''}catch(e){}
 try{code=localStorage.getItem('pa_code')||''}catch(e){}
 const q=new URLSearchParams(location.search).get('c');
 if(q){code=q.toUpperCase().replace(/[^A-Z0-9]/g,'');try{localStorage.setItem('pa_code',code)}catch(e){}try{history.replaceState(null,'',location.pathname)}catch(e){}}
-try{const c=localStorage.getItem('pa_data');if(c&&code)D=JSON.parse(c)}catch(e){}
+const seenOf=k=>{try{return +localStorage.getItem('pa_seen_'+k.id)||0}catch(e){return 0}};
+function setD(){
+ if(!DD||!DD.kids||!DD.kids.length){D=null;return}
+ const k=DD.kids.find(z=>z.id===kid)||DD.kids[0];
+ D=Object.assign({},k,{teacher:DD.teacher,hol:DD.hol,ts:DD.ts});
+ seen=seenOf(k);
+}
+try{const c=localStorage.getItem('pa_data');if(c&&code){DD=JSON.parse(c);setD()}}catch(e){}
 
 async function load(silent){
  if(!code){draw();return}
@@ -76,23 +83,22 @@ async function load(silent){
  let redraw=!silent;
  try{
   const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'parent',c:code})}).then(z=>z.json());
-  if(r&&r.ok&&r.student){
-   if(JSON.stringify(r)!==JSON.stringify(D)||note)redraw=true;
-   D=r;note='';try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}
+  if(r&&r.ok&&r.kids&&r.kids.length){
+   if(JSON.stringify(r)!==JSON.stringify(DD)||note)redraw=true;
+   DD=r;note='';setD();try{localStorage.setItem('pa_data',JSON.stringify(r))}catch(e){}
   }else if(r&&r.error==='bad'){
-   D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}
-   note='This code is not correct. Please check the link sent by the teacher.';redraw=true;
-  }else if(r&&r.error==='busy'){note='Too many wrong attempts. Please try again after 10 minutes.';redraw=true}
-  else if(r&&r.ok){note='The app is not ready yet. Please ask the teacher.';redraw=true}
+   DD=null;D=null;code='';try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}
+   note='This link is not valid any more. Please ask the teacher to send the link again.';redraw=true;
+  }else if(r&&r.ok){note='The app is not ready yet. Please ask the teacher.';redraw=true}
   else if(!silent)note='Could not load right now. Please try again.';
  }catch(e){if(!silent)note=D?'You are offline. Showing the last saved record.':'No internet. Please try again.'}
  loading=false;if(redraw)draw();
 }
 const isNew=()=>!!(D&&D.nu&&D.nu>seen);
 function ft(ms){const d=new Date(ms),z=n=>String(n).padStart(2,'0');return z(d.getDate())+'/'+z(d.getMonth()+1)+' '+z(d.getHours())+':'+z(d.getMinutes())}
-function markSeen(){seen=(D&&D.nu)||0;try{localStorage.setItem('pa_seen',String(seen))}catch(e){}}
+function markSeen(){seen=(D&&D.nu)||0;try{localStorage.setItem('pa_seen_'+D.id,String(seen))}catch(e){}}
 function newBanner(){
- return isNew()?`<div class="bx g" style="border-width:2px"><b>\u{1F514} New update from the teacher</b><div class="mu">${ft(D.nu)} | Homework and today's record are updated.</div><div style="margin-top:8px;display:flex;gap:8px"><button class="on" id="nvw" style="flex:1">View today</button><button id="nok" style="flex:1">OK</button></div></div>`:'';
+ return isNew()?`<div class="bx g" style="border-width:2px"><b>\u{1F514} New update from the teacher${DD&&DD.kids.length>1?' for '+esc(D.student.name):''}</b><div class="mu">${ft(D.nu)} | Homework and today's record are updated.</div><div style="margin-top:8px;display:flex;gap:8px"><button class="on" id="nvw" style="flex:1">View today</button><button id="nok" style="flex:1">OK</button></div></div>`:'';
 }
 function updBadge(){try{document.title=(isNew()?'\u{1F514} ':'')+'Tuition Record';if(navigator.setAppBadge){if(isNew())navigator.setAppBadge(1);else navigator.clearAppBadge()}}catch(e){}}
 function todayIso(){return iso(new Date())}
@@ -196,26 +202,26 @@ function draw(){
  const el=$('app');
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
-  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="4-character code, e.g. A4K9" maxlength="4" autocapitalize="characters" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
-  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);if(v.length<4){note='Please enter the 4-character code.';draw();return}if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  <div class="c"><b>Please open the link the teacher sent you on WhatsApp.</b><p class="mu">You only need to do this once. After that this app opens by itself.</p>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
   return;
  }
  const ms=months();if(!month||!ms.includes(month))month=ms[0];
  const upd=D.ts?new Date(D.ts):null,u=upd?String(upd.getDate()).padStart(2,'0')+'/'+String(upd.getMonth()+1).padStart(2,'0')+' '+String(upd.getHours()).padStart(2,'0')+':'+String(upd.getMinutes()).padStart(2,'0'):'';
  const body=tab==='ov'?ovTab():tab==='day'?dayTab():tab==='test'?testTab():exTab();
  el.innerHTML=`<div class="hd"><h1>${esc(D.student.name)}</h1><div class="mu">Class ${esc(D.student.cls)}${D.teacher?' | Teacher: '+esc(D.teacher):''}</div>${u?`<div class="fs">Updated ${u}</div>`:''}</div>
+ ${DD&&DD.kids.length>1?`<div style="display:flex;gap:8px;margin:6px 0">${DD.kids.map(k=>`<button class="${k.id===D.id?'on':''}" data-k="${esc(k.id)}" style="flex:1">${esc(k.student.name)}${k.nu&&k.nu>seenOf(k)?' \u{1F514}':''}</button>`).join('')}</div>`:''}
  ${newBanner()}${note?`<div class="bx b">${esc(note)}</div>`:''}
  <div class="tabs">${[['ov','Overview'],['day','Daily'],['test','Tests'],['ex','Exams']].map(([k,l])=>`<button class="${tab===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>
  ${tab==='ov'||tab==='day'?`<select id="mon">${ms.map(m=>`<option value="${m}"${m===month?' selected':''}>${esc(mlabel(m))}</option>`).join('')}</select>`:''}
  ${body}
- <div class="ft"><button id="rf">${loading?'Loading...':'Refresh'}</button> <button id="lo">Change code</button></div>`;
+ <div class="ft"><button id="rf">${loading?'Loading...':'Refresh'}</button></div>`;
  el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;draw();window.scrollTo(0,0)});
  const sel=$('mon');if(sel)sel.onchange=()=>{month=sel.value;draw()};
  const nv=$('nvw');if(nv)nv.onclick=()=>{markSeen();tab='day';month=todayIso().slice(0,7);draw();window.scrollTo(0,0)};
  const nk=$('nok');if(nk)nk.onclick=()=>{markSeen();draw()};
  updBadge();
  $('rf').onclick=()=>load();
- $('lo').onclick=()=>{code='';D=null;try{localStorage.removeItem('pa_code');localStorage.removeItem('pa_data')}catch(e){}draw()};
+ el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{kid=b.dataset.k;try{localStorage.setItem('pa_kid',kid)}catch(e){}setD();draw();window.scrollTo(0,0)});
 }
 draw();load();
 setInterval(()=>{if(!document.hidden&&code&&!loading)load(true)},60000);
