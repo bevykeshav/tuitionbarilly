@@ -196,8 +196,8 @@ function draw(){
  const el=$('app');
  if(!code||!D){
   el.innerHTML=`<div class="hd"><h1>\u{1F4D8} Tuition Record</h1><div class="mu">See your child's daily record. You can only view it.</div></div>
-  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="4-digit code, e.g. 4821" inputmode="numeric" maxlength="4" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
-  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').replace(/\D/g,'').slice(0,4);if(v.length<4){note='Please enter the 4-digit code.';draw();return}if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
+  <div class="c"><label class="mu">Enter the code sent by the teacher</label><input id="cd" autocomplete="off" autocapitalize="characters" placeholder="4-character code, e.g. A4K9" maxlength="4" autocapitalize="characters" style="margin:8px 0;text-transform:uppercase"><button class="on" id="go" style="width:100%">Open</button>${note?`<p class="r">${esc(note)}</p>`:''}${loading?'<p class="mu">Loading...</p>':''}</div>`;
+  const go=$('go');if(go)go.onclick=()=>{const v=($('cd').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);if(v.length<4){note='Please enter the 4-character code.';draw();return}if(v){code=v;try{localStorage.setItem('pa_code',code)}catch(e){}load()}};
   return;
  }
  const ms=months();if(!month||!ms.includes(month))month=ms[0];
