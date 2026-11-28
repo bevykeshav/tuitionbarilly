@@ -43,6 +43,8 @@ input,select{width:100%;border:1px solid var(--ln);background:var(--bg);border-r
 .chip.r{border-color:var(--r);color:var(--r)}
 details{margin:4px 0}summary{cursor:pointer;padding:4px 0}
 .ft{text-align:center;margin-top:16px}
+.wk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.wk .n{font-size:20px;font-weight:700;line-height:1.2}
 .calg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
 .calh{font-size:12px;color:var(--mu);text-align:center}
 .cal{border-radius:8px;padding:8px 0;font-size:14px;border:1px solid var(--ln)}
@@ -175,6 +177,51 @@ function hwTop(){
  const when=k===1?'Yesterday':dayName(d)+' '+fmt(d).slice(0,5);
  return `<div class="bx b" style="border-width:2px"><b>\u{1F4DD} ${k===0?"Today's homework":'Last homework | '+when}</b><div style="white-space:pre-wrap">${esc(r.hwtext)}</div>${r.work?`<div class="mu" style="margin-top:6px"><b>Covered in class:</b> ${esc(r.work)}</div>`:''}${phHtml(d,['hw'])}</div>`;
 }
+function hwStreak(){
+ let run=0,best=0;
+ Object.keys(D.recs).sort().forEach(d=>{const v=D.recs[d].hw;if(v==='Y'){run++;if(run>best)best=run}else if(v==='N')run=0});
+ return {cur:run,best};
+}
+function weekCard(){
+ const td=todayIso(),t0=new Date(td+'T00:00:00'),dow=(t0.getDay()+6)%7,st=iso(new Date(t0.getTime()-dow*864e5));
+ let P=0,A=0,hy=0,hn=0,tn=0;const ts=[];
+ for(let i=0;i<=dow;i++){
+  const d=iso(new Date(new Date(st+'T00:00:00').getTime()+i*864e5)),r=D.recs[d];if(!r)continue;
+  if(r.att==='P')P++;else if(r.att==='A')A++;
+  if(r.hw==='Y')hy++;else if(r.hw==='N')hn++;
+  if(r.tsub||r.tmk){tn++;const p=pct(r);if(p!==null)ts.push(p)}
+ }
+ const ta=ts.length?Math.round(ts.reduce((a,b)=>a+b,0)/ts.length):null,hw=hy+hn,sk=hwStreak();
+ const has=P+A+hw+tn>0;
+ return `<div class="c"><h2>This week <span class="mu">${fmt(st).slice(0,5)} to ${fmt(td).slice(0,5)}</span></h2>
+ ${has?`<div class="wk">
+  <div><div class="n g">${P}</div><div class="fs">Present</div></div>
+  <div><div class="n ${A?'r':''}">${A}</div><div class="fs">Absent</div></div>
+  <div><div class="n ${hw?(hy/hw>=0.7?'g':'r'):''}">${hw?hy+'/'+hw:'-'}</div><div class="fs">Homework done</div></div>
+  <div><div class="n ${ta===null?'':ta>=40?'g':'r'}">${ta===null?'-':ta+'%'}</div><div class="fs">${tn?tn+' test'+(tn===1?'':'s'):'Tests'}</div></div>
+ </div>`:'<div class="mu">No records yet this week.</div>'}
+ ${sk.cur>=2?`<div class="bx g" style="margin:10px 0 0">\u{1F525} <b style="display:inline">${sk.cur} homeworks in a row completed</b>${sk.best>sk.cur?' <span class="mu">| Best: '+sk.best+'</span>':''}</div>`:''}</div>`;
+}
+function chartCard(){
+ const t=[];
+ Object.keys(D.recs).sort().forEach(d=>{const p=pct(D.recs[d]);if(p!==null)t.push({d,p})});
+ if(t.length<2)return '';
+ const L=t.slice(-10),n=L.length,W=320,H=140,pl=24,pr=6,pt=14,pb=26,cw=(W-pl-pr)/n,bw=Math.min(26,cw-6);
+ const y=v=>pt+(H-pt-pb)*(1-v/100);
+ let g='';
+ [0,50,100].forEach(v=>{g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--ln)"/><text x="${pl-4}" y="${y(v)+3}" text-anchor="end" style="fill:var(--mu);font-size:9px">${v}</text>`});
+ L.forEach((x,i)=>{
+  const cx=pl+cw*i+cw/2,cl=x.p>=70?'g':x.p>=40?'b':'r',top=y(x.p);
+  g+=`<rect x="${cx-bw/2}" y="${top}" width="${bw}" height="${Math.max(1,y(0)-top)}" rx="3" style="fill:var(--${cl})"/><text x="${cx}" y="${top-3}" text-anchor="middle" style="fill:var(--tx);font-size:9px;font-weight:600">${Math.round(x.p)}</text><text x="${cx}" y="${H-12}" text-anchor="middle" style="fill:var(--mu);font-size:8px">${fmt(x.d).slice(0,5)}</text>`;
+ });
+ let tr='';
+ if(t.length>=4){
+  const av=a=>a.reduce((s,x)=>s+x.p,0)/a.length,df=av(t.slice(-3))-av(t.slice(-6,-3));
+  tr=`<div class="fs" style="margin-top:4px">Trend (last 3 tests vs the 3 before): ${df>=5?'<b class="g">Improving \u2191</b>':df<=-5?'<b class="r">Going down \u2193</b>':'<b>Steady</b>'}</div>`;
+ }
+ return `<div class="c"><h2>Test marks graph <span class="mu">last ${n} tests, %</span></h2><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>
+ <div class="lg"><span><i style="background:var(--g)"></i>70% or more</span><span><i style="background:var(--b)"></i>40 to 69%</span><span><i style="background:var(--r)"></i>Below 40%</span></div>${tr}</div>`;
+}
 function calHtml(){
  const y=+month.slice(0,4),mo=+month.slice(5,7),n=new Date(y,mo,0).getDate(),td=todayIso();
  const first=(new Date(y,mo-1,1).getDay()+6)%7;
@@ -221,7 +268,7 @@ function ovDetail(){
   for(let i=1;i<=n;i++){const d=month+'-'+String(i).padStart(2,'0');if(d>td)break;const r=D.recs[d]||{};if(r.att==='H'||(!r.att&&isSun(d)))h.push(fmt(d).slice(0,5))}
   if(h.length)ex=`<div class="fs" style="margin:0 0 6px">Holidays (not counted as absent): ${h.join(', ')}</div>`;
  }
- return `<h2 style="margin:16px 0 4px;font-size:17px">${T[ovSel]} | ${esc(mlabel(month))} (${ds.length})</h2>${ex}${ovSel==='ts'?subjCard():''}${ds.length?ds.map(dayCard).join(''):'<div class="c mu">No records.</div>'}`;
+ return `<h2 style="margin:16px 0 4px;font-size:17px">${T[ovSel]} | ${esc(mlabel(month))} (${ds.length})</h2>${ex}${ovSel==='ts'?chartCard()+subjCard():''}${ds.length?ds.map(dayCard).join(''):'<div class="c mu">No records.</div>'}`;
 }
 function ovTab(){
  const s=stats(month),hw=s.hy+s.hn,hp=hw?Math.round(s.hy*100/hw):null,ta=s.ts.length?Math.round(s.ts.reduce((a,b)=>a+b,0)/s.ts.length):null;
@@ -240,6 +287,7 @@ function ovTab(){
  const ex=upcoming(7).slice(0,4);
  return `
  ${hwTop()}
+ ${weekCard()}
  <div class="fs" style="margin:6px 0 -2px">Tap a box to see its full record</div>
  <div class="grid">
   <div class="c tap${ovSel==='P'?' sel':''}" data-ov="P"><div class="mu">Present</div><div class="big g">${s.P}</div><div class="fs">days</div></div>
@@ -279,6 +327,7 @@ function testTab(){
  if(!t.length)return '<div class="c mu">No tests yet.</div>';
  const ps=t.map(x=>pct(x[1])).filter(v=>v!==null),a=ps.length?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null;
  return `${a===null?'':`<div class="c"><span class="mu">Overall test average</span> <span class="big ${a>=40?'g':'r'}">${a}%</span></div>`}
+ ${chartCard()}
  ${subjCard()}
  <div class="c">${t.map(([d,r])=>{const p=pct(r);return `<div class="row"><div class="k">${fmt(d).slice(0,5)}</div><div class="v">${esc(r.tsub||'Test')}</div><div><b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>${phHtml(d,['ts'])}`}).join('')}</div>`;
 }
