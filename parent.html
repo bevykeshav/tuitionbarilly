@@ -43,6 +43,7 @@ input,select{width:100%;border:1px solid var(--ln);background:var(--bg);border-r
 .chip.r{border-color:var(--r);color:var(--r)}
 details{margin:4px 0}summary{cursor:pointer;padding:4px 0}
 .ft{text-align:center;margin-top:16px}
+.tap{cursor:pointer}.tap.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
 .pimg{max-width:100%;border-radius:8px;border:1px solid var(--ln);display:block}
 </style></head><body>
 <div id="app"></div>
@@ -64,7 +65,7 @@ const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return
 const nbS=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='S').map(k=>k.slice(3));
 const nbH=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='H').map(k=>k.slice(3));
 
-let D=null,DD=null,kid='',code='',tab='ov',month='',note='',loading=false,seen=0;
+let D=null,DD=null,kid='',code='',tab='ov',month='',note='',loading=false,seen=0,ovSel='';
 try{kid=localStorage.getItem('pa_kid')||''}catch(e){}
 try{code=localStorage.getItem('pa_code')||''}catch(e){}
 const q=new URLSearchParams(location.search).get('c');
@@ -154,6 +155,26 @@ async function phLoad(id){
  }catch(e){PHB[id]='e'}
  draw();
 }
+function ovDays(k){
+ const n=new Date(+month.slice(0,4),+month.slice(5,7),0).getDate(),td=todayIso(),out=[];
+ for(let i=n;i>=1;i--){
+  const d=month+'-'+String(i).padStart(2,'0');if(d>td)continue;
+  const r=D.recs[d];if(!r)continue;
+  if((k==='P'&&r.att==='P')||(k==='A'&&r.att==='A')||(k==='hw'&&(r.hw==='Y'||r.hw==='N'))||(k==='ts'&&(r.tsub||r.tmk)))out.push(d);
+ }
+ return out;
+}
+function ovDetail(){
+ if(!ovSel)return '';
+ const T={P:'Present days',A:'Absent days',hw:'Homework record',ts:'Tests'},ds=ovDays(ovSel);
+ let ex='';
+ if(ovSel==='A'){
+  const n=new Date(+month.slice(0,4),+month.slice(5,7),0).getDate(),td=todayIso(),h=[];
+  for(let i=1;i<=n;i++){const d=month+'-'+String(i).padStart(2,'0');if(d>td)break;const r=D.recs[d]||{};if(r.att==='H'||(!r.att&&isSun(d)))h.push(fmt(d).slice(0,5))}
+  if(h.length)ex=`<div class="fs" style="margin:0 0 6px">Holidays (not counted as absent): ${h.join(', ')}</div>`;
+ }
+ return `<h2 style="margin:16px 0 4px;font-size:17px">${T[ovSel]} | ${esc(mlabel(month))} (${ds.length})</h2>${ex}${ds.length?ds.map(dayCard).join(''):'<div class="c mu">No records.</div>'}`;
+}
 function ovTab(){
  const s=stats(month),hw=s.hy+s.hn,hp=hw?Math.round(s.hy*100/hw):null,ta=s.ts.length?Math.round(s.ts.reduce((a,b)=>a+b,0)/s.ts.length):null;
  const bad=[],good=[];
@@ -170,12 +191,14 @@ function ovTab(){
  });
  const ex=upcoming(7).slice(0,4);
  return `
+ <div class="fs" style="margin:6px 0 -2px">Tap a box to see its full record</div>
  <div class="grid">
-  <div class="c"><div class="mu">Present</div><div class="big g">${s.P}</div><div class="fs">days</div></div>
-  <div class="c"><div class="mu">Absent</div><div class="big ${s.A?'r':''}">${s.A}</div><div class="fs">days${s.H?' | Holidays: '+s.H:''}</div></div>
-  <div class="c"><div class="mu">Homework completed</div><div class="big ${hp===null?'':hp>=70?'g':'r'}">${hp===null?'-':hp+'%'}</div><div class="fs">${s.hy} of ${hw} times</div></div>
-  <div class="c"><div class="mu">Tests</div><div class="big ${ta===null?'':ta>=40?'g':'r'}">${ta===null?'-':ta+'%'}</div><div class="fs">${s.tn} taken (average)</div></div>
+  <div class="c tap${ovSel==='P'?' sel':''}" data-ov="P"><div class="mu">Present</div><div class="big g">${s.P}</div><div class="fs">days</div></div>
+  <div class="c tap${ovSel==='A'?' sel':''}" data-ov="A"><div class="mu">Absent</div><div class="big ${s.A?'r':''}">${s.A}</div><div class="fs">days${s.H?' | Holidays: '+s.H:''}</div></div>
+  <div class="c tap${ovSel==='hw'?' sel':''}" data-ov="hw"><div class="mu">Homework completed</div><div class="big ${hp===null?'':hp>=70?'g':'r'}">${hp===null?'-':hp+'%'}</div><div class="fs">${s.hy} of ${hw} times</div></div>
+  <div class="c tap${ovSel==='ts'?' sel':''}" data-ov="ts"><div class="mu">Tests</div><div class="big ${ta===null?'':ta>=40?'g':'r'}">${ta===null?'-':ta+'%'}</div><div class="fs">${s.tn} taken (average)</div></div>
  </div>
+ ${ovDetail()}
  ${s.nb?`<div class="c"><span class="r"><b>Notebook kept at school:</b></span> ${s.nb} day${s.nb===1?'':'s'} in ${esc(mlabel(month))}</div>`:''}
  ${ex.length?`<div class="bx b"><b>\u{1F4DD} Upcoming exams</b>${ex.map(e=>`<div>${exLabel(e.d)}: ${esc(e.s)}</div>`).join('')}</div>`:''}
  ${bad.length?`<div class="bx r"><b>\u{1F534} Needs attention (last 7 days)</b>${bad.map(t=>`<div>\u{1F534} ${t}</div>`).join('')}</div>`:''}
@@ -185,7 +208,9 @@ function ovTab(){
 function dayTab(){
  const days=Object.keys(D.recs).filter(d=>d.slice(0,7)===month).sort().reverse();
  if(!days.length)return '<div class="c mu">No records in this month.</div>';
- return days.map(d=>{
+ return days.map(dayCard).join('');
+}
+function dayCard(d){
   const r=D.recs[d],f=fest(d),s=nbS(r),h=nbH(r),p=pct(r);
   return `<div class="c day"><div class="dh"><div><b>${fmt(d).slice(0,5)}</b> <span class="mu">${dayName(d)}</span>${f?` <span class="fs">\u{1F389} ${esc(f)}</span>`:''}</div>${attBadge(r,d)}</div>
   ${r.work?`<div class="row"><div class="k">Covered in class</div><div class="v">${esc(r.work)}</div></div>`:''}
@@ -197,7 +222,7 @@ function dayTab(){
   ${r.pnote?`<div class="bx g" style="margin:6px 0 0">\u{1F7E2} ${esc(r.pnote)}</div>`:''}
   ${r.nnote?`<div class="bx r" style="margin:6px 0 0">\u{1F534} ${esc(r.nnote)}</div>`:''}
   ${r.note?`<div class="row"><div class="k">Note</div><div class="v">${esc(r.note)}</div></div>`:''}
-  </div>`}).join('');
+  </div>`;
 }
 function testTab(){
  const t=[];Object.keys(D.recs).sort().reverse().forEach(d=>{const r=D.recs[d];if(r.tsub||r.tmk)t.push([d,r])});
@@ -244,6 +269,7 @@ function draw(){
  const nk=$('nok');if(nk)nk.onclick=()=>{markSeen();draw()};
  updBadge();
  el.querySelectorAll('[data-ph]').forEach(b=>b.onclick=()=>phLoad(b.dataset.ph));
+ el.querySelectorAll('[data-ov]').forEach(b=>b.onclick=()=>{ovSel=ovSel===b.dataset.ov?'':b.dataset.ov;draw()});
  $('rf').onclick=()=>load();
  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{kid=b.dataset.k;try{localStorage.setItem('pa_kid',kid)}catch(e){}setD();draw();window.scrollTo(0,0)});
 }
