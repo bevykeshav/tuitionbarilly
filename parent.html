@@ -43,6 +43,18 @@ input,select{width:100%;border:1px solid var(--ln);background:var(--bg);border-r
 .chip.r{border-color:var(--r);color:var(--r)}
 details{margin:4px 0}summary{cursor:pointer;padding:4px 0}
 .ft{text-align:center;margin-top:16px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.calh{font-size:12px;color:var(--mu);text-align:center}
+.cal{border-radius:8px;padding:8px 0;font-size:14px;border:1px solid var(--ln)}
+.cal.p{background:var(--gs);color:var(--g);border-color:var(--g);font-weight:600}
+.cal.a{background:var(--rs);color:var(--r);border-color:var(--r);font-weight:600}
+.cal.h{background:var(--bs);color:var(--b);border-color:var(--b)}
+.cal.n{color:var(--mu)}
+.cal.f{opacity:.35}
+.cal.td{outline:2px solid var(--ac);outline-offset:1px}
+.cal[data-cd]{cursor:pointer}
+.lg{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--mu)}
+.lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:1px solid var(--ln)}
 .tap{cursor:pointer}.tap.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
 .pimg{max-width:100%;border-radius:8px;border:1px solid var(--ln);display:block}
 </style></head><body>
@@ -65,7 +77,7 @@ const pct=r=>{const m=String(r.tmk||'').match(/([\d.]+)\s*\/\s*([\d.]+)/);return
 const nbS=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='S').map(k=>k.slice(3));
 const nbH=r=>Object.keys(r).filter(k=>k.indexOf('nb_')===0&&r[k]==='H').map(k=>k.slice(3));
 
-let D=null,DD=null,kid='',code='',tab='ov',month='',note='',loading=false,seen=0,ovSel='';
+let D=null,DD=null,kid='',code='',tab='ov',month='',note='',loading=false,seen=0,ovSel='',calSel='';
 try{kid=localStorage.getItem('pa_kid')||''}catch(e){}
 try{code=localStorage.getItem('pa_code')||''}catch(e){}
 const q=new URLSearchParams(location.search).get('c');
@@ -155,6 +167,42 @@ async function phLoad(id){
  }catch(e){PHB[id]='e'}
  draw();
 }
+function hwTop(){
+ const td=todayIso();
+ const days=Object.keys(D.recs).filter(d=>d<=td&&String(D.recs[d].hwtext||'').trim()).sort();
+ if(!days.length)return '';
+ const d=days[days.length-1],r=D.recs[d],k=ddiff(d,td);
+ const when=k===1?'Yesterday':dayName(d)+' '+fmt(d).slice(0,5);
+ return `<div class="bx b" style="border-width:2px"><b>\u{1F4DD} ${k===0?"Today's homework":'Last homework | '+when}</b><div style="white-space:pre-wrap">${esc(r.hwtext)}</div>${r.work?`<div class="mu" style="margin-top:6px"><b>Covered in class:</b> ${esc(r.work)}</div>`:''}${phHtml(d,['hw'])}</div>`;
+}
+function calHtml(){
+ const y=+month.slice(0,4),mo=+month.slice(5,7),n=new Date(y,mo,0).getDate(),td=todayIso();
+ const first=(new Date(y,mo-1,1).getDay()+6)%7;
+ let cells='';
+ for(let i=0;i<first;i++)cells+='<div></div>';
+ for(let i=1;i<=n;i++){
+  const d=month+'-'+String(i).padStart(2,'0'),r=D.recs[d]||{},fut=d>td;
+  let cl='f';
+  if(!fut)cl=r.att==='P'?'p':r.att==='A'?'a':(r.att==='H'||(!r.att&&isSun(d)))?'h':'n';
+  cells+=`<div class="cal ${cl}${d===td?' td':''}"${D.recs[d]&&!fut?` data-cd="${d}"`:''}>${i}</div>`;
+ }
+ const sel=calSel&&calSel.slice(0,7)===month&&D.recs[calSel]?dayCard(calSel):'';
+ return `<div class="c"><h2>Attendance calendar | ${esc(mlabel(month))}</h2><div class="calg">${['Mo','Tu','We','Th','Fr','Sa','Su'].map(x=>`<div class="calh">${x}</div>`).join('')}${cells}</div>
+ <div class="lg"><span><i style="background:var(--gs);border-color:var(--g)"></i>Present</span><span><i style="background:var(--rs);border-color:var(--r)"></i>Absent</span><span><i style="background:var(--bs);border-color:var(--b)"></i>Holiday</span><span><i></i>No entry</span></div>
+ <div class="fs" style="margin-top:6px">Tap a date to see that day's record</div></div>${sel}`;
+}
+function subjCard(){
+ const m={};
+ Object.keys(D.recs).forEach(d=>{
+  const r=D.recs[d],p=pct(r);if(p===null)return;
+  const raw=String(r.tsub||'Test').replace(/\(.*?\)/g,'').trim()||'Test',key=raw.toLowerCase().replace(/\s+/g,' ');
+  const o=m[key]||(m[key]={n:raw,s:0,c:0});o.s+=p;o.c++;
+ });
+ const a=Object.values(m).map(o=>({n:o.n.charAt(0).toUpperCase()+o.n.slice(1),a:Math.round(o.s/o.c),c:o.c})).sort((x,y)=>x.a-y.a);
+ if(!a.length)return '';
+ const weak=a.length>1&&a[0].a<70?`<div class="fs" style="margin-bottom:4px">Needs more practice: <b>${esc(a[0].n)}</b> (${a[0].a}%)</div>`:'';
+ return `<div class="c"><h2>Subject-wise average</h2>${weak}${a.map(x=>{const cl=x.a>=70?'g':x.a>=40?'b':'r';return `<div style="margin:8px 0"><div class="row" style="margin:0"><div class="v"><b>${esc(x.n)}</b> <span class="fs">${x.c} test${x.c===1?'':'s'}</span></div><b class="${cl}">${x.a}%</b></div><div class="bar"><i style="width:${x.a}%;background:var(--${cl})"></i></div></div>`}).join('')}</div>`;
+}
 function ovDays(k){
  const n=new Date(+month.slice(0,4),+month.slice(5,7),0).getDate(),td=todayIso(),out=[];
  for(let i=n;i>=1;i--){
@@ -173,7 +221,7 @@ function ovDetail(){
   for(let i=1;i<=n;i++){const d=month+'-'+String(i).padStart(2,'0');if(d>td)break;const r=D.recs[d]||{};if(r.att==='H'||(!r.att&&isSun(d)))h.push(fmt(d).slice(0,5))}
   if(h.length)ex=`<div class="fs" style="margin:0 0 6px">Holidays (not counted as absent): ${h.join(', ')}</div>`;
  }
- return `<h2 style="margin:16px 0 4px;font-size:17px">${T[ovSel]} | ${esc(mlabel(month))} (${ds.length})</h2>${ex}${ds.length?ds.map(dayCard).join(''):'<div class="c mu">No records.</div>'}`;
+ return `<h2 style="margin:16px 0 4px;font-size:17px">${T[ovSel]} | ${esc(mlabel(month))} (${ds.length})</h2>${ex}${ovSel==='ts'?subjCard():''}${ds.length?ds.map(dayCard).join(''):'<div class="c mu">No records.</div>'}`;
 }
 function ovTab(){
  const s=stats(month),hw=s.hy+s.hn,hp=hw?Math.round(s.hy*100/hw):null,ta=s.ts.length?Math.round(s.ts.reduce((a,b)=>a+b,0)/s.ts.length):null;
@@ -191,6 +239,7 @@ function ovTab(){
  });
  const ex=upcoming(7).slice(0,4);
  return `
+ ${hwTop()}
  <div class="fs" style="margin:6px 0 -2px">Tap a box to see its full record</div>
  <div class="grid">
   <div class="c tap${ovSel==='P'?' sel':''}" data-ov="P"><div class="mu">Present</div><div class="big g">${s.P}</div><div class="fs">days</div></div>
@@ -199,6 +248,7 @@ function ovTab(){
   <div class="c tap${ovSel==='ts'?' sel':''}" data-ov="ts"><div class="mu">Tests</div><div class="big ${ta===null?'':ta>=40?'g':'r'}">${ta===null?'-':ta+'%'}</div><div class="fs">${s.tn} taken (average)</div></div>
  </div>
  ${ovDetail()}
+ ${calHtml()}
  ${s.nb?`<div class="c"><span class="r"><b>Notebook kept at school:</b></span> ${s.nb} day${s.nb===1?'':'s'} in ${esc(mlabel(month))}</div>`:''}
  ${ex.length?`<div class="bx b"><b>\u{1F4DD} Upcoming exams</b>${ex.map(e=>`<div>${exLabel(e.d)}: ${esc(e.s)}</div>`).join('')}</div>`:''}
  ${bad.length?`<div class="bx r"><b>\u{1F534} Needs attention (last 7 days)</b>${bad.map(t=>`<div>\u{1F534} ${t}</div>`).join('')}</div>`:''}
@@ -229,6 +279,7 @@ function testTab(){
  if(!t.length)return '<div class="c mu">No tests yet.</div>';
  const ps=t.map(x=>pct(x[1])).filter(v=>v!==null),a=ps.length?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null;
  return `${a===null?'':`<div class="c"><span class="mu">Overall test average</span> <span class="big ${a>=40?'g':'r'}">${a}%</span></div>`}
+ ${subjCard()}
  <div class="c">${t.map(([d,r])=>{const p=pct(r);return `<div class="row"><div class="k">${fmt(d).slice(0,5)}</div><div class="v">${esc(r.tsub||'Test')}</div><div><b class="${p===null?'':p>=40?'g':'r'}">${esc(r.tmk||'')}</b></div></div>${phHtml(d,['ts'])}`}).join('')}</div>`;
 }
 function exLabel(d){const k=ddiff(todayIso(),d);return k===0?'<b class="r">Today</b>':k===1?'<b>Tomorrow</b>':dayName(d).slice(0,3)+' '+fmt(d).slice(0,5)}
@@ -269,6 +320,7 @@ function draw(){
  const nk=$('nok');if(nk)nk.onclick=()=>{markSeen();draw()};
  updBadge();
  el.querySelectorAll('[data-ph]').forEach(b=>b.onclick=()=>phLoad(b.dataset.ph));
+ el.querySelectorAll('[data-cd]').forEach(b=>b.onclick=()=>{calSel=calSel===b.dataset.cd?'':b.dataset.cd;draw()});
  el.querySelectorAll('[data-ov]').forEach(b=>b.onclick=()=>{ovSel=ovSel===b.dataset.ov?'':b.dataset.ov;draw()});
  $('rf').onclick=()=>load();
  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{kid=b.dataset.k;try{localStorage.setItem('pa_kid',kid)}catch(e){}setD();draw();window.scrollTo(0,0)});
